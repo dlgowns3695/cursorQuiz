@@ -1,13 +1,79 @@
 import { Question } from "./types";
 import { managementQuestions } from "./questions/managementQuestions";
-import { railwayQuestions } from "./questions/railwayQuestions";
+
+// 철도 관련 문제들 import
+import * as railwayBasicLaw from "./questions/railway/railway_basic_law";
+import * as railwayBasicLawRegulation from "./questions/railway/railway_basic_law_regulation";
+import * as railwayIndustryLaw from "./questions/railway/railway_industry_law";
+import * as railwayIndustryLawRegulation from "./questions/railway/railway_industry_law_regulation";
+import * as railwayCorporationLaw from "./questions/railway/railway_corporation_law";
+import * as railwayCorporationLawRegulation from "./questions/railway/railway_corporation_law_regulation";
 
 export class QuestionService {
   private static instance: QuestionService;
   private questions: Question[] = [];
+  private questionMap: Map<string, Question[]> = new Map();
 
   private constructor() {
-    this.questions = [...managementQuestions, ...railwayQuestions];
+    this.initializeQuestions();
+    this.organizeQuestionsBySubjectAndDifficulty();
+  }
+
+  private initializeQuestions() {
+    // 경영학 문제들
+    this.questions = [...managementQuestions];
+
+    // 철도 관련 문제들을 맵에 저장
+    const railwayQuestions = [
+      // 철도산업발전기본법
+      ...railwayBasicLaw.철도산업발전기본법_쉬움,
+      ...railwayBasicLaw.철도산업발전기본법_보통,
+      ...railwayBasicLaw.철도산업발전기본법_어려움,
+      ...railwayBasicLaw.철도산업발전기본법_매우어려움,
+      // 철도산업발전기본법 시행령
+      ...railwayBasicLawRegulation.철도산업발전기본법_시행령_매우쉬움,
+      ...railwayBasicLawRegulation.철도산업발전기본법_시행령_쉬움,
+      ...railwayBasicLawRegulation.철도산업발전기본법_시행령_보통,
+      ...railwayBasicLawRegulation.철도산업발전기본법_시행령_어려움,
+      ...railwayBasicLawRegulation.철도산업발전기본법_시행령_매우어려움,
+      // 철도산업법
+      ...railwayIndustryLaw.철도산업법_매우쉬움,
+      ...railwayIndustryLaw.철도산업법_쉬움,
+      ...railwayIndustryLaw.철도산업법_보통,
+      ...railwayIndustryLaw.철도산업법_어려움,
+      ...railwayIndustryLaw.철도산업법_매우어려움,
+      // 철도산업법 시행령
+      ...railwayIndustryLawRegulation.철도산업법_시행령_매우쉬움,
+      ...railwayIndustryLawRegulation.철도산업법_시행령_쉬움,
+      ...railwayIndustryLawRegulation.철도산업법_시행령_보통,
+      ...railwayIndustryLawRegulation.철도산업법_시행령_어려움,
+      ...railwayIndustryLawRegulation.철도산업법_시행령_매우어려움,
+      // 철도공사법
+      ...railwayCorporationLaw.철도공사법_매우쉬움,
+      ...railwayCorporationLaw.철도공사법_쉬움,
+      ...railwayCorporationLaw.철도공사법_보통,
+      ...railwayCorporationLaw.철도공사법_어려움,
+      ...railwayCorporationLaw.철도공사법_매우어려움,
+      // 철도공사법 시행령
+      ...railwayCorporationLawRegulation.철도공사법_시행령_매우쉬움,
+      ...railwayCorporationLawRegulation.철도공사법_시행령_쉬움,
+      ...railwayCorporationLawRegulation.철도공사법_시행령_보통,
+      ...railwayCorporationLawRegulation.철도공사법_시행령_어려움,
+      ...railwayCorporationLawRegulation.철도공사법_시행령_매우어려움,
+    ];
+
+    this.questions = [...this.questions, ...railwayQuestions];
+  }
+
+  private organizeQuestionsBySubjectAndDifficulty() {
+    // 과목별, 난이도별로 문제들을 맵에 저장
+    this.questions.forEach((question) => {
+      const key = `${question.subject}_${question.difficulty}`;
+      if (!this.questionMap.has(key)) {
+        this.questionMap.set(key, []);
+      }
+      this.questionMap.get(key)!.push(question);
+    });
   }
 
   public static getInstance(): QuestionService {
@@ -93,9 +159,19 @@ export class QuestionService {
       return filteredQuestions;
     }
 
-    // 랜덤하게 선택
-    const shuffled = [...filteredQuestions].sort(() => 0.5 - Math.random());
+    // Fisher-Yates 셔플 알고리즘으로 더 나은 랜덤성 제공
+    const shuffled = this.shuffleArray([...filteredQuestions]);
     return shuffled.slice(0, count);
+  }
+
+  // Fisher-Yates 셔플 알고리즘
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
   }
 
   // 문제 추가

@@ -29,7 +29,7 @@ const QuizPage: React.FC = () => {
       const loadedQuestions = questionService.getRandomQuestions(
         subjectType as "management" | "railway",
         difficulty,
-        10
+        20
       );
       console.log("Loaded questions:", loadedQuestions.length, loadedQuestions);
       setQuestions(loadedQuestions);
@@ -37,11 +37,11 @@ const QuizPage: React.FC = () => {
       setIsLoading(false);
 
       // 문제 로드 완료 알럿창
-      alert(
-        `문제 로드 완료!\n과목: ${
-          subjectType === "management" ? "경영학" : "철도법령"
-        }\n난이도: ${difficulty}\n문제 수: ${loadedQuestions.length}개`
-      );
+      // alert(
+      //   `문제 로드 완료!\n과목: ${
+      //     subjectType === "management" ? "경영학" : "철도법령"
+      //   }\n난이도: ${difficulty}\n문제 수: ${loadedQuestions.length}개`
+      // );
     } else if (!subjectType || !difficulty) {
       console.log("Missing parameters:", { subjectType, difficulty });
       setIsLoading(false);
@@ -225,12 +225,12 @@ const QuizPage: React.FC = () => {
         </div>
 
         {/* 문제 카드 */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <div className="mb-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4">
               {currentQuestionIndex + 1}. {currentQuestion.question}
             </h2>
-            <div className="text-sm text-gray-600 mb-4">
+            <div className="text-sm text-gray-600 mb-4 hidden">
               난이도: {currentQuestion.difficulty} | {currentQuestion.points}점
             </div>
           </div>
@@ -244,8 +244,8 @@ const QuizPage: React.FC = () => {
                 className={getAnswerButtonClass(index)}
                 disabled={isAnswered}
               >
-                <div className="flex items-center">
-                  <span className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold mr-3">
+                <div className="flex items-center text-xs">
+                  <span className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold mr-3">
                     {index + 1}
                   </span>
                   {option}
@@ -260,14 +260,14 @@ const QuizPage: React.FC = () => {
           <div className="flex space-x-4">
             <button
               onClick={() => navigate("/")}
-              className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+              className="text-xs px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
             >
               🏠 메인으로
             </button>
             <button
               onClick={handlePrevious}
               disabled={currentQuestionIndex === 0}
-              className="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
+              className="text-xs px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
             >
               ← 뒤로가기
             </button>
@@ -278,14 +278,14 @@ const QuizPage: React.FC = () => {
               <button
                 onClick={handleNext}
                 disabled={!isAnswered}
-                className="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+                className="text-xs px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
               >
                 다음으로 →
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
-                className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors"
+                className="text-xs px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors"
               >
                 제출하기 ✓
               </button>

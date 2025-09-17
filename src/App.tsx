@@ -7,7 +7,7 @@ import ResultPage from "./pages/quiz/ResultPage";
 
 function App() {
   return (
-    <Router>
+    <Router basename="/cursorQuiz">
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route
