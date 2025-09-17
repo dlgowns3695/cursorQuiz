@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/railway-law-app/static/css/main.d1fe9aa8.css",
-    "main.js": "/railway-law-app/static/js/main.f91583dc.js",
-    "static/js/453.b6296c28.chunk.js": "/railway-law-app/static/js/453.b6296c28.chunk.js",
-    "index.html": "/railway-law-app/index.html",
-    "main.d1fe9aa8.css.map": "/railway-law-app/static/css/main.d1fe9aa8.css.map",
-    "main.f91583dc.js.map": "/railway-law-app/static/js/main.f91583dc.js.map",
-    "453.b6296c28.chunk.js.map": "/railway-law-app/static/js/453.b6296c28.chunk.js.map"
+    "main.css": "/cursorQuiz/static/css/main.d1fe9aa8.css",
+    "main.js": "/cursorQuiz/static/js/main.b5f88f0f.js",
+    "static/js/453.b6296c28.chunk.js": "/cursorQuiz/static/js/453.b6296c28.chunk.js",
+    "index.html": "/cursorQuiz/index.html",
+    "main.d1fe9aa8.css.map": "/cursorQuiz/static/css/main.d1fe9aa8.css.map",
+    "main.b5f88f0f.js.map": "/cursorQuiz/static/js/main.b5f88f0f.js.map",
+    "453.b6296c28.chunk.js.map": "/cursorQuiz/static/js/453.b6296c28.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.d1fe9aa8.css",
-    "static/js/main.f91583dc.js"
+    "static/js/main.b5f88f0f.js"
   ]
 }
