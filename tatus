@@ -1,0 +1,154 @@
+[1mdiff --git a/fix_bracket_errors.js b/fix_bracket_errors.js[m
+[1mnew file mode 100644[m
+[1mindex 0000000..47bf0ed[m
+[1m--- /dev/null[m
+[1m+++ b/fix_bracket_errors.js[m
+[36m@@ -0,0 +1,16 @@[m
+[32m+[m[32mconst fs = require('fs');[m
+[32m+[m
+[32m+[m[32m// 파일 경로[m
+[32m+[m[32mconst filePath = 'src/data/questions/railway/railway_basic_law.ts';[m
+[32m+[m
+[32m+[m[32m// 파일 읽기[m
+[32m+[m[32mlet content = fs.readFileSync(filePath, 'utf8');[m
+[32m+[m
+[32m+[m[32m// 중복된 중괄호 패턴 수정[m
+[32m+[m[32m// "  },\n  {\n      {" 패턴을 "  },\n  {" 로 변경[m
+[32m+[m[32mcontent = content.replace(/  },\n  \{\n      \{/g, '  },\n  {');[m
+[32m+[m
+[32m+[m[32m// 파일 저장[m
+[32m+[m[32mfs.writeFileSync(filePath, content, 'utf8');[m
+[32m+[m
+[32m+[m[32mconsole.log('중복된 중괄호 오류 수정 완료');[m
+[1mdiff --git a/src/data/questionService.ts b/src/data/questionService.ts[m
+[1mindex c327037..04e4956 100644[m
+[1m--- a/src/data/questionService.ts[m
+[1m+++ b/src/data/questionService.ts[m
+[36m@@ -1,13 +1,6 @@[m
+ import { Question } from "./types";[m
+ import { managementQuestions } from "./questions/managementQuestions";[m
+[31m-[m
+[31m-// 철도 관련 문제들 import[m
+[31m-import * as railwayBasicLaw from "./questions/railway/railway_basic_law";[m
+[31m-import * as railwayBasicLawRegulation from "./questions/railway/railway_basic_law_regulation";[m
+[31m-import * as railwayIndustryLaw from "./questions/railway/railway_industry_law";[m
+[31m-import * as railwayIndustryLawRegulation from "./questions/railway/railway_industry_law_regulation";[m
+[31m-import * as railwayCorporationLaw from "./questions/railway/railway_corporation_law";[m
+[31m-import * as railwayCorporationLawRegulation from "./questions/railway/railway_corporation_law_regulation";[m
+[32m+[m[32mimport { railwayQuestions } from "./questions/railwayQuestions";[m
+ [m
+ export class QuestionService {[m
+   private static instance: QuestionService;[m
+[36m@@ -20,49 +13,8 @@[m [mexport class QuestionService {[m
+   }[m
+ [m
+   private initializeQuestions() {[m
+[31m-    // 경영학 문제들[m
+[31m-    this.questions = [...managementQuestions];[m
+[31m-[m
+[31m-    // 철도 관련 문제들을 맵에 저장[m
+[31m-    const railwayQuestions = [[m
+[31m-      // 철도산업발전기본법[m
+[31m-      ...railwayBasicLaw.철도산업발전기본법_쉬움,[m
+[31m-      ...railwayBasicLaw.철도산업발전기본법_보통,[m
+[31m-      ...railwayBasicLaw.철도산업발전기본법_어려움,[m
+[31m-      ...railwayBasicLaw.철도산업발전기본법_매우어려움,[m
+[31m-      // 철도산업발전기본법 시행령[m
+[31m-      ...railwayBasicLawRegulation.철도산업발전기본법_시행령_매우쉬움,[m
+[31m-      ...railwayBasicLawRegulation.철도산업발전기본법_시행령_쉬움,[m
+[31m-      ...railwayBasicLawRegulation.철도산업발전기본법_시행령_보통,[m
+[31m-      ...railwayBasicLawRegulation.철도산업발전기본법_시행령_어려움,[m
+[31m-      ...railwayBasicLawRegulation.철도산업발전기본법_시행령_매우어려움,[m
+[31m-      // 철도산업법[m
+[31m-      ...railwayIndustryLaw.철도산업법_매우쉬움,[m
+[31m-      ...railwayIndustryLaw.철도산업법_쉬움,[m
+[31m-      ...railwayIndustryLaw.철도산업법_보통,[m
+[31m-      ...railwayIndustryLaw.철도산업법_어려움,[m
+[31m-      ...railwayIndustryLaw.철도산업법_매우어려움,[m
+[31m-      // 철도산업법 시행령[m
+[31m-      ...railwayIndustryLawRegulation.철도산업법_시행령_매우쉬움,[m
+[31m-      ...railwayIndustryLawRegulation.철도산업법_시행령_쉬움,[m
+[31m-      ...railwayIndustryLawRegulation.철도산업법_시행령_보통,[m
+[31m-      ...railwayIndustryLawRegulation.철도산업법_시행령_어려움,[m
+[31m-      ...railwayIndustryLawRegulation.철도산업법_시행령_매우어려움,[m
+[31m-      // 철도공사법[m
+[31m-      ...railwayCorporationLaw.철도공사법_매우쉬움,[m
+[31m-      ...railwayCorporationLaw.철도공사법_쉬움,[m
+[31m-      ...railwayCorporationLaw.철도공사법_보통,[m
+[31m-      ...railwayCorporationLaw.철도공사법_어려움,[m
+[31m-      ...railwayCorporationLaw.철도공사법_매우어려움,[m
+[31m-      // 철도공사법 시행령[m
+[31m-      ...railwayCorporationLawRegulation.철도공사법_시행령_매우쉬움,[m
+[31m-      ...railwayCorporationLawRegulation.철도공사법_시행령_쉬움,[m
+[31m-      ...railwayCorporationLawRegulation.철도공사법_시행령_보통,[m
+[31m-      ...railwayCorporationLawRegulation.철도공사법_시행령_어려움,[m
+[31m-      ...railwayCorporationLawRegulation.철도공사법_시행령_매우어려움,[m
+[31m-    ];[m
+[31m-[m
+[31m-    this.questions = [...this.questions, ...railwayQuestions];[m
+[32m+[m[32m    // 경영학 문제들과 철도 문제들을 합침[m
+[32m+[m[32m    this.questions = [...managementQuestions, ...railwayQuestions];[m
+   }[m
+ [m
+   private organizeQuestionsBySubjectAndDifficulty() {[m
+[1mdiff --git a/src/data/questions/railway/railway_basic_law.ts b/src/data/questions/railway/railway_basic_law.ts[m
+[1mdeleted file mode 100644[m
+[1mindex 6bfe175..0000000[m
+[1m--- a/src/data/questions/railway/railway_basic_law.ts[m
+[1m+++ /dev/null[m
+[36m@@ -1,1457 +0,0 @@[m
+[31m-import { Question } from "../../types";[m
+[31m-[m
+[31m-// 철도산업발전기본법 - 쉬움 (30문제)[m
+[31m-export const 철도산업발전기본법_쉬움: Question[] = [[m
+[31m-  {[m
+[31m-    id: "철도산업발전기본법_쉬움_1",[m
+[31m-    subject: "철도산업발전기본법",[m
+[31m-    difficulty: "쉬움",[m
+[31m-    question: "철도산업발전기본법 쉬움 문제 1번입니다.",[m
+[31m-    options: ["선택지 1", "선택지 2", "선택지 3", "선택지 4", "선택지 5"],[m
+[31m-    correctAnswer: 0,[m
+[31m-    explanation: "철도산업발전기본법 쉬움 문제 1번의 정답 설명입니다.",[m
+[31m-    points: 2,[m
+[31m-    createdAt: "2024-01-01",[m
+[31m-    updatedAt: "2024-01-01",[m
+[31m-  },[m
+[31m-  {[m
+[31m-    id: "철도산업발전기본법_쉬움_2",[m
+[31m-    subject: "철도산업발전기본법",[m
+[31m-    difficulty: "쉬움",[m
+[31m-    question: "철도산업발전기본법 쉬움 문제 2번입니다.",[m
+[31m-    options: ["선택지 1", "선택지 2", "선택지 3", "선택지 4", "선택지 5"],[m
+[31m-    correctAnswer: 1,[m
+[31m-    explanation: "철도산업발전기본법 쉬움 문제 2번의 정답 설명입니다.",[m
+[31m-    points: 2,[m
+[31m-    createdAt: "2024-01-01",[m
+[31m-    updatedAt: "2024-01-01",[m
+[31m-  },[m
+[31m-  {[m
+[31m-    id: "철도산업발전기본법_쉬움_3",[m
+[31m-    subject: "철도산업발전기본법",[m
+[31m-    difficulty: "쉬움",[m
+[31m-    question: "철도산업발전기본법 쉬움 문제 3번입니다.",[m
+[31m-    options: ["선택지 1", "선택지 2", "선택지 3", "선택지 4", "선택지 5"],[m
+[31m-    correctAnswer: 2,[m
+[31m-    explanation: "철도산업발전기본법 쉬움 문제 3번의 정답 설명입니다.",[m
+[31m-    points: 2,[m
+[31m-    createdAt: "2024-01-01",[m
+[31m-    updatedAt: "2024-01-01",[m
+[31m-  },[m
+[31m-  {[m
+[31m-    id: "철도산업발전기본법_쉬움_4",[m
+[31m-    subject: "철도산업발전기본법",[m
+[31m-    difficulty: "쉬움",[m
+[31m-    question: "철도산업발전기본법 쉬움 문제 4번입니다.",[m
+[31m-    options: ["선택지 1", "선택지 2", "선택지 3", "선택지 4", "선택지 5"],[m
+[31m-    correctAnswer: 3,[m
+[31m-    explanation: "철도산업발전기본법 쉬움 문제 4번의 정답 설명입니다.",[m
+[31m-    points: 2,[m
+[31m-    createdAt: "2024-01-01",[m
+[31m-    updatedAt: "2024-01-01",[m
+[31m-  },[m
+[31m-  {[m
+[31m-    id: "철도산업발전기본법_쉬움_5",[m
+[31m-    subject: "철도산업발전기본법",[m
