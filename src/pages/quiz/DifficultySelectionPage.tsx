@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ProgressManager } from "../../data/questionManager";
+import { QUIZ_QUESTIONS_COUNT } from "../../data/constants";
 
 interface UserProgress {
   averageScore: number;
@@ -17,7 +19,10 @@ interface UserProgress {
 
 const DifficultySelectionPage: React.FC = () => {
   const navigate = useNavigate();
-  const { subjectType } = useParams<{ subjectType: string }>();
+  const { subjectType, subject } = useParams<{
+    subjectType: string;
+    subject: string;
+  }>();
   const [userProgress, setUserProgress] = useState<UserProgress>({
     averageScore: 0,
     totalPoints: 0,
@@ -38,23 +43,16 @@ const DifficultySelectionPage: React.FC = () => {
 
   // 사용자 진도 로드
   useEffect(() => {
-    const savedProgress = localStorage.getItem("userProgress");
-    if (savedProgress) {
-      try {
-        const parsedProgress = JSON.parse(savedProgress);
-        setUserProgress({
-          averageScore: parsedProgress.averageScore || 0,
-          totalPoints: parsedProgress.totalPoints || 0,
-          unlockedDifficulties: parsedProgress.unlockedDifficulties || [
-            "매우쉬움",
-          ],
-          completedSubjects: parsedProgress.completedSubjects || [],
-          difficultyStats: parsedProgress.difficultyStats || {},
-        });
-      } catch (error) {
-        console.error("사용자 진도 데이터 파싱 오류:", error);
-      }
-    }
+    const progress = ProgressManager.getUserProgress();
+    const difficultyStats = ProgressManager.getDifficultyStats();
+
+    setUserProgress({
+      averageScore: progress.averageScore,
+      totalPoints: progress.totalPoints,
+      unlockedDifficulties: progress.unlockedDifficulties,
+      completedSubjects: progress.completedSubjects,
+      difficultyStats: difficultyStats,
+    });
   }, []);
 
   // subjectType이 없으면 메인으로 리다이렉트
@@ -112,7 +110,9 @@ const DifficultySelectionPage: React.FC = () => {
       ];
     if (!condition) return null;
 
-    const stats = userProgress.difficultyStats["매우쉬움"] || {
+    // ProgressManager를 사용하여 실제 통계 가져오기
+    const difficultyStats = ProgressManager.getDifficultyStats();
+    const stats = difficultyStats[difficulty] || {
       attempts: 0,
       totalScore: 0,
       averageScore: 0,
@@ -143,7 +143,7 @@ const DifficultySelectionPage: React.FC = () => {
     }
 
     // 문제풀이 페이지로 이동
-    navigate(`/quiz/${subjectType}/${difficulty}`);
+    navigate(`/quiz/${subjectType}/${subject}/${difficulty}`);
   };
 
   const handleGoBack = () => {
@@ -173,7 +173,9 @@ const DifficultySelectionPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {difficulties.map((difficulty, index) => {
             const isUnlocked = isDifficultyUnlocked(difficulty.name);
-            const stats = userProgress.difficultyStats[difficulty.name] || {
+            // ProgressManager에서 최신 통계 가져오기
+            const difficultyStats = ProgressManager.getDifficultyStats();
+            const stats = difficultyStats[difficulty.name] || {
               attempts: 0,
               totalScore: 0,
               averageScore: 0,
@@ -252,7 +254,7 @@ const DifficultySelectionPage: React.FC = () => {
         {/* 하단 정보 */}
         <div className="text-center mt-12">
           <p className="text-gray-500 text-sm">
-            각 난이도별로 10문제씩 출제됩니다
+            각 난이도별로 {QUIZ_QUESTIONS_COUNT}문제씩 출제됩니다
           </p>
         </div>
       </div>

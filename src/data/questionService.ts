@@ -143,14 +143,84 @@ export class QuestionService {
     return this.questions.find((question) => question.id === id);
   }
 
+  // 특정 과목과 난이도의 문제들을 가져오기 (새로운 과목명 지원)
+  public getQuestionsBySubjectAndDifficultyNew(
+    subjectType: "management" | "railway",
+    subject: string,
+    difficulty: string
+  ): Question[] {
+    console.log("=== 새로운 필터링 시작 ===");
+    console.log("subjectType:", subjectType);
+    console.log("subject:", subject);
+    console.log("difficulty:", difficulty);
+    console.log("전체 문제 수:", this.questions.length);
+
+    const filtered = this.questions.filter((question) => {
+      let subjectMatch = false;
+
+      if (subjectType === "management") {
+        subjectMatch = question.subject.includes("경영");
+      } else if (subjectType === "railway") {
+        if (subject === "철도산업발전기본법(기본법+시행령)") {
+          subjectMatch = question.subject.includes("철도산업발전기본법");
+        } else if (subject === "철도산업법(기본법+시행령)") {
+          subjectMatch = question.subject.includes("철도산업법");
+        } else if (subject === "철도공사법(기본법+시행령)") {
+          subjectMatch = question.subject.includes("철도공사법");
+        } else if (subject === "전체 통합") {
+          subjectMatch = question.subject.includes("철도");
+        }
+      }
+
+      const difficultyMatch = question.difficulty === difficulty;
+
+      console.log(
+        `문제: ${question.id}, subject: ${question.subject}, difficulty: ${question.difficulty}`
+      );
+      console.log(
+        `subjectMatch: ${subjectMatch}, difficultyMatch: ${difficultyMatch}`
+      );
+
+      return subjectMatch && difficultyMatch;
+    });
+
+    console.log("필터링 결과:", filtered.length, "개");
+    console.log("=== 새로운 필터링 완료 ===");
+
+    return filtered;
+  }
+
   // 랜덤하게 문제들을 선택하기 (퀴즈용)
   public getRandomQuestions(
     subjectType: "management" | "railway",
     difficulty: string,
-    count: number = 10
+    count: number = 5
   ): Question[] {
     const filteredQuestions = this.getQuestionsBySubjectAndDifficulty(
       subjectType,
+      difficulty
+    );
+
+    // 문제가 충분하지 않으면 모든 문제 반환
+    if (filteredQuestions.length <= count) {
+      return filteredQuestions;
+    }
+
+    // Fisher-Yates 셔플 알고리즘으로 더 나은 랜덤성 제공
+    const shuffled = this.shuffleArray([...filteredQuestions]);
+    return shuffled.slice(0, count);
+  }
+
+  // 랜덤하게 문제들을 선택하기 (새로운 과목명 지원)
+  public getRandomQuestionsNew(
+    subjectType: "management" | "railway",
+    subject: string,
+    difficulty: string,
+    count: number = 5
+  ): Question[] {
+    const filteredQuestions = this.getQuestionsBySubjectAndDifficultyNew(
+      subjectType,
+      subject,
       difficulty
     );
 

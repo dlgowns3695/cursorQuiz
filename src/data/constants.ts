@@ -16,12 +16,9 @@ export const SUBJECTS: Subject[] = [
     name: "철도법령 시작하기",
     type: "railway",
     subjects: [
-      "철도산업발전기본법",
-      "철도산업발전기본법 시행령",
-      "철도산업법",
-      "철도산업법 시행령",
-      "철도공사법",
-      "철도공사법 시행령",
+      "철도산업발전기본법(기본법+시행령)",
+      "철도산업법(기본법+시행령)",
+      "철도공사법(기본법+시행령)",
       "전체 통합",
     ],
     description: "철도 관련 법령 완전 정복",
@@ -52,10 +49,12 @@ export const DIFFICULTY_ORDER = [
 export const POINTS_PER_QUESTION = 1; // 문제당 획득 포인트
 export const POINTS_FOR_DIFFICULTY_UNLOCK = 5; // 난이도 해금에 필요한 포인트
 
+// 퀴즈 설정 상수
+export const QUIZ_QUESTIONS_COUNT = 5; // 퀴즈당 문제 수
+
 // 로컬 스토리지 키 상수
 export const STORAGE_KEYS = {
   USER_PROGRESS: "userProgress",
   QUESTIONS: "questions",
   QUIZ_SESSIONS: "quizSessions",
 } as const;
-

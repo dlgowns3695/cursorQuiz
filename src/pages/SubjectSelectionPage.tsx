@@ -1,22 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { Subject } from "../data/types";
+import React, { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { SUBJECTS } from "../data/constants";
 import { ProgressManager } from "../data/questionManager";
 
-interface SubjectSelectionPageProps {
-  subjectType: "management" | "railway";
-  onSubjectSelect: (subject: string) => void;
-  onBack: () => void;
-}
-
-const SubjectSelectionPage: React.FC<SubjectSelectionPageProps> = ({
-  subjectType,
-  onSubjectSelect,
-  onBack,
-}) => {
-  const [userProgress, setUserProgress] = useState(
-    ProgressManager.getUserProgress()
-  );
+const SubjectSelectionPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { subjectType } = useParams<{ subjectType: string }>();
+  const [userProgress] = useState(ProgressManager.getUserProgress());
   const [selectedSubject, setSelectedSubject] = useState<string>("");
 
   // 해당 타입의 과목 정보 가져오기
@@ -29,7 +19,7 @@ const SubjectSelectionPage: React.FC<SubjectSelectionPageProps> = ({
           <h1 className="text-2xl font-bold text-red-600 mb-4">오류</h1>
           <p className="text-gray-600">해당 과목을 찾을 수 없습니다.</p>
           <button
-            onClick={onBack}
+            onClick={() => navigate("/")}
             className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
           >
             돌아가기
@@ -44,10 +34,16 @@ const SubjectSelectionPage: React.FC<SubjectSelectionPageProps> = ({
     return ProgressManager.getSubjectProgress(subject);
   };
 
+  // 세부 과목별 난이도 통계 가져오기
+  const getSubjectDifficultyStats = (subject: string) => {
+    return ProgressManager.getSubjectDifficultyStats(subject);
+  };
+
   // 과목 선택 핸들러
   const handleSubjectSelect = (subject: string) => {
     setSelectedSubject(subject);
-    onSubjectSelect(subject);
+    // 난이도 선택 페이지로 이동
+    navigate(`/quiz/${subjectType}/${subject}/difficulty`);
   };
 
   return (
@@ -58,7 +54,7 @@ const SubjectSelectionPage: React.FC<SubjectSelectionPageProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <button
-                onClick={onBack}
+                onClick={() => navigate("/")}
                 className="text-white hover:text-blue-200 transition-colors"
               >
                 ← 돌아가기
@@ -151,11 +147,11 @@ const SubjectSelectionPage: React.FC<SubjectSelectionPageProps> = ({
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">풀이한 문제:</span>
                           <span className="font-semibold">
-                            {progress.correctAnswers}/{progress.totalQuestions}
+                            {progress.totalQuestions}회
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">완료한 난이도:</span>
+                          <span className="text-gray-600">해금된 난이도:</span>
                           <span className="font-semibold text-blue-600">
                             {progress.completedDifficulties.length}개
                           </span>
@@ -224,6 +220,43 @@ const SubjectSelectionPage: React.FC<SubjectSelectionPageProps> = ({
           </div>
         )}
 
+        {/* 선택된 과목의 난이도별 통계 */}
+        {selectedSubject && (
+          <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              {selectedSubject} 난이도별 통계
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {["매우쉬움", "쉬움", "보통", "어려움", "매우어려움"].map(
+                (difficulty) => {
+                  const difficultyStats =
+                    getSubjectDifficultyStats(selectedSubject);
+                  const stats = difficultyStats[difficulty] || {
+                    attempts: 0,
+                    totalScore: 0,
+                    averageScore: 0,
+                  };
+
+                  return (
+                    <div
+                      key={difficulty}
+                      className="bg-gray-50 rounded-lg p-4 text-center border-2 border-gray-200"
+                    >
+                      <div className="text-lg font-bold text-gray-800 mb-2">
+                        {difficulty}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <div>풀이: {stats.attempts}번</div>
+                        <div>평균: {stats.averageScore}점</div>
+                      </div>
+                    </div>
+                  );
+                }
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 학습 팁 */}
         <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-yellow-800 mb-2">
@@ -244,4 +277,3 @@ const SubjectSelectionPage: React.FC<SubjectSelectionPageProps> = ({
 };
 
 export default SubjectSelectionPage;
-

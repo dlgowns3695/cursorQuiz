@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Question } from "../../data/types";
 import { questionService } from "../../data/questionService";
+import { QUIZ_QUESTIONS_COUNT } from "../../data/constants";
 
 const QuizPage: React.FC = () => {
   const navigate = useNavigate();
-  const { subjectType, difficulty } = useParams<{
+  const { subjectType, subject, difficulty } = useParams<{
     subjectType: string;
+    subject: string;
     difficulty: string;
   }>();
 
@@ -26,10 +28,11 @@ const QuizPage: React.FC = () => {
     if (subjectType && difficulty && !hasLoadedQuestions.current) {
       hasLoadedQuestions.current = true;
       console.log("Loading questions for:", subjectType, difficulty);
-      const loadedQuestions = questionService.getRandomQuestions(
+      const loadedQuestions = questionService.getRandomQuestionsNew(
         subjectType as "management" | "railway",
+        subject || "",
         difficulty,
-        20
+        QUIZ_QUESTIONS_COUNT
       );
       console.log("Loaded questions:", loadedQuestions.length, loadedQuestions);
       setQuestions(loadedQuestions);
@@ -46,7 +49,7 @@ const QuizPage: React.FC = () => {
       console.log("Missing parameters:", { subjectType, difficulty });
       setIsLoading(false);
     }
-  }, [subjectType, difficulty]);
+  }, [subjectType, subject, difficulty]);
 
   // 타이머 효과
   useEffect(() => {
@@ -165,7 +168,7 @@ const QuizPage: React.FC = () => {
     const score = Math.round((correctCount / questions.length) * 100);
 
     // 결과 페이지로 이동
-    navigate(`/quiz/${subjectType}/${difficulty}/result`, {
+    navigate(`/quiz/${subjectType}/${subject}/${difficulty}/result`, {
       state: {
         score,
         totalQuestions: questions.length,

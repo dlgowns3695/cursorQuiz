@@ -1,20 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-
-// 사용자 점수 및 진도 관리 인터페이스
-interface UserProgress {
-  averageScore: number;
-  totalPoints: number;
-  unlockedDifficulties: string[];
-  completedSubjects: string[];
-  difficultyStats: {
-    [difficulty: string]: {
-      attempts: number;
-      totalScore: number;
-      averageScore: number;
-    };
-  };
-}
+import { ProgressManager } from "../data/questionManager";
+import { UserProgress } from "../data/types";
 
 // 과목 정보 인터페이스
 interface Subject {
@@ -36,22 +23,31 @@ const MainPage: React.FC = () => {
     totalPoints: 0,
     unlockedDifficulties: ["매우쉬움"], // 기본적으로 매우쉬움만 해금
     completedSubjects: [],
-    difficultyStats: {},
+    questionHistory: [],
   });
 
   // 통계 모달 상태
   const [showStatsModal, setShowStatsModal] = useState(false);
-  const [selectedSubjectForStats, setSelectedSubjectForStats] = useState<
+  const [selectedStatsSubject, setSelectedStatsSubject] = useState<
+    string | null
+  >(null);
+
+  // 초기화 확인 모달 상태
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [selectedSubjectToReset, setSelectedSubjectToReset] = useState<
     string | null
   >(null);
 
   // 난이도 해금 조건
-  const difficultyUnlockConditions = {
-    쉬움: { minAttempts: 5, minAverage: 60 },
-    중간: { minAttempts: 10, minAverage: 70 },
-    어려움: { minAttempts: 15, minAverage: 80 },
-    매우어려움: { minAttempts: 20, minAverage: 90 },
-  };
+  const difficultyUnlockConditions = useMemo(
+    () => ({
+      쉬움: { minAttempts: 5, minAverage: 60 },
+      중간: { minAttempts: 10, minAverage: 70 },
+      어려움: { minAttempts: 15, minAverage: 80 },
+      매우어려움: { minAttempts: 20, minAverage: 90 },
+    }),
+    []
+  );
 
   // 과목 정보 정의
   const subjects: Subject[] = [
@@ -84,72 +80,138 @@ const MainPage: React.FC = () => {
   ];
 
   // 난이도 해금 체크 함수
-  const checkDifficultyUnlock = (difficulty: string) => {
-    const condition =
-      difficultyUnlockConditions[
-        difficulty as keyof typeof difficultyUnlockConditions
-      ];
-    if (!condition) return false;
+  const checkDifficultyUnlock = useCallback(
+    (difficulty: string) => {
+      const condition =
+        difficultyUnlockConditions[
+          difficulty as keyof typeof difficultyUnlockConditions
+        ];
+      if (!condition) return false;
 
-    const stats = userProgress.difficultyStats["매우쉬움"] || {
-      attempts: 0,
-      totalScore: 0,
-      averageScore: 0,
-    };
-    return (
-      stats.attempts >= condition.minAttempts &&
-      stats.averageScore >= condition.minAverage
-    );
-  };
+      const difficultyStats = ProgressManager.getDifficultyStats();
+      const stats = difficultyStats["매우쉬움"] || {
+        attempts: 0,
+        totalScore: 0,
+        averageScore: 0,
+      };
+      return (
+        stats.attempts >= condition.minAttempts &&
+        stats.averageScore >= condition.minAverage
+      );
+    },
+    [difficultyUnlockConditions]
+  );
 
   // 컴포넌트 마운트 시 로컬 스토리지에서 사용자 진도 로드
   useEffect(() => {
-    const savedProgress = localStorage.getItem("userProgress");
-    if (savedProgress) {
-      try {
-        const parsedProgress = JSON.parse(savedProgress);
-        // 안전한 데이터 구조로 설정
-        const newProgress = {
-          averageScore: parsedProgress.averageScore || 0,
-          totalPoints: parsedProgress.totalPoints || 0,
-          unlockedDifficulties: parsedProgress.unlockedDifficulties || [
-            "매우쉬움",
-          ],
-          completedSubjects: parsedProgress.completedSubjects || [],
-          difficultyStats: parsedProgress.difficultyStats || {},
-        };
+    const progress = ProgressManager.getUserProgress();
 
-        // 해금된 난이도 체크
-        const unlockedDifficulties = ["매우쉬움"];
-        Object.keys(difficultyUnlockConditions).forEach((difficulty) => {
-          if (checkDifficultyUnlock(difficulty)) {
-            unlockedDifficulties.push(difficulty);
-          }
-        });
-
-        newProgress.unlockedDifficulties = unlockedDifficulties;
-        setUserProgress(newProgress);
-      } catch (error) {
-        console.error("사용자 진도 데이터 파싱 오류:", error);
-        // 기본값으로 설정
-        setUserProgress({
-          averageScore: 0,
-          totalPoints: 0,
-          unlockedDifficulties: ["매우쉬움"],
-          completedSubjects: [],
-          difficultyStats: {},
-        });
+    // 해금된 난이도 체크
+    const unlockedDifficulties = ["매우쉬움"];
+    Object.keys(difficultyUnlockConditions).forEach((difficulty) => {
+      if (checkDifficultyUnlock(difficulty)) {
+        unlockedDifficulties.push(difficulty);
       }
-    }
-  }, []);
+    });
+
+    const newProgress = {
+      averageScore: progress.averageScore,
+      totalPoints: progress.totalPoints,
+      unlockedDifficulties: unlockedDifficulties,
+      completedSubjects: progress.completedSubjects,
+      questionHistory: progress.questionHistory,
+    };
+
+    setUserProgress(newProgress);
+  }, [checkDifficultyUnlock, difficultyUnlockConditions]); // 필요한 의존성 추가
 
   // 과목 선택 핸들러
   const handleSubjectSelect = (subject: Subject) => {
-    // 선택한 과목 알럿창 표시
-    // alert(`선택한 과목: ${subject.name}`);
+    // 세부 과목 선택 페이지로 이동
+    navigate(`/quiz/${subject.type}/subjects`);
+  };
 
-    // 난이도 선택 페이지로 이동
-    navigate(`/quiz/${subject.type}/difficulty`);
+  // 초기화 버튼 클릭 핸들러
+  const handleResetClick = (subjectType: string) => {
+    setSelectedSubjectToReset(subjectType);
+    setShowResetModal(true);
+  };
+
+  // 초기화 확인 핸들러
+  const handleResetConfirm = () => {
+    if (!selectedSubjectToReset) return;
+
+    const currentProgress = ProgressManager.getUserProgress();
+
+    // 선택된 과목의 데이터만 제거
+    const filteredHistory = currentProgress.questionHistory.filter((record) => {
+      if (selectedSubjectToReset === "management") {
+        return !record.subject.includes("경영");
+      } else if (selectedSubjectToReset === "railway") {
+        return !record.subject.includes("철도");
+      }
+      return true;
+    });
+
+    // 해당 과목으로 얻은 포인트 계산
+    const removedPoints = currentProgress.questionHistory
+      .filter((record) => {
+        if (selectedSubjectToReset === "management") {
+          return record.subject.includes("경영");
+        } else if (selectedSubjectToReset === "railway") {
+          return record.subject.includes("철도");
+        }
+        return false;
+      })
+      .reduce((sum, record) => sum + (record.isCorrect ? 1 : 0), 0);
+
+    // 새로운 진도 계산
+    const newTotalPoints = Math.max(
+      0,
+      currentProgress.totalPoints - removedPoints
+    );
+    const allScores = filteredHistory.map((h) => h.score);
+    const newAverageScore =
+      allScores.length > 0
+        ? Math.round(
+            allScores.reduce((sum, s) => sum + s, 0) / allScores.length
+          )
+        : 0;
+
+    const newProgress: UserProgress = {
+      averageScore: newAverageScore,
+      totalPoints: newTotalPoints,
+      unlockedDifficulties: currentProgress.unlockedDifficulties,
+      completedSubjects: currentProgress.completedSubjects.filter((subject) => {
+        if (selectedSubjectToReset === "management") {
+          return !subject.includes("경영");
+        } else if (selectedSubjectToReset === "railway") {
+          return !subject.includes("철도");
+        }
+        return true;
+      }),
+      questionHistory: filteredHistory,
+    };
+
+    ProgressManager.saveUserProgress(newProgress);
+
+    // UI 업데이트
+    setUserProgress({
+      averageScore: newProgress.averageScore,
+      totalPoints: newProgress.totalPoints,
+      unlockedDifficulties: newProgress.unlockedDifficulties,
+      completedSubjects: newProgress.completedSubjects,
+      questionHistory: newProgress.questionHistory,
+    });
+
+    setShowResetModal(false);
+    setSelectedSubjectToReset(null);
+  };
+
+  // 초기화 취소 핸들러
+  const handleResetCancel = () => {
+    setShowResetModal(false);
+    setSelectedSubjectToReset(null);
   };
 
   return (
@@ -203,12 +265,23 @@ const MainPage: React.FC = () => {
                 {subject.description}
               </p>
 
-              {/* 시작하기 버튼 */}
-              <button
-                className={`w-full py-3 px-6 ${subject.color} text-white rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity`}
-              >
-                시작하기 →
-              </button>
+              {/* 버튼들 */}
+              <div className="space-y-3">
+                <button
+                  className={`w-full py-3 px-6 ${subject.color} text-white rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity`}
+                >
+                  시작하기 →
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleResetClick(subject.type);
+                  }}
+                  className="w-full py-2 px-4 bg-gray-500 text-white rounded-lg font-medium text-sm hover:bg-gray-600 transition-colors"
+                >
+                  초기화
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -233,7 +306,7 @@ const MainPage: React.FC = () => {
                 <button
                   onClick={() => {
                     setShowStatsModal(false);
-                    setSelectedSubjectForStats(null);
+                    setSelectedStatsSubject(null);
                   }}
                   className="text-gray-500 hover:text-gray-700 text-2xl"
                 >
@@ -242,87 +315,288 @@ const MainPage: React.FC = () => {
               </div>
 
               {/* 과목 선택 */}
-              {!selectedSubjectForStats ? (
+              {!selectedStatsSubject ? (
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-6">
                     통계를 볼 과목을 선택하세요
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto">
-                    {subjects.map((subject) => (
-                      <button
-                        key={subject.id}
-                        onClick={() => setSelectedSubjectForStats(subject.id)}
-                        className="p-4 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                      >
-                        <div className="text-2xl mb-2">{subject.icon}</div>
-                        <div className="font-semibold text-gray-800">
-                          {subject.name}
-                        </div>
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                    {/* 경영학원론 */}
+                    <button
+                      onClick={() => setSelectedStatsSubject("management")}
+                      className="p-6 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                    >
+                      <div className="text-4xl mb-3">📊</div>
+                      <div className="font-semibold text-gray-800 text-lg mb-2">
+                        경영학원론
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        경영학 관련 통계 보기
+                      </div>
+                    </button>
+
+                    {/* 철도법령 */}
+                    <button
+                      onClick={() => setSelectedStatsSubject("railway")}
+                      className="p-6 bg-white border-2 border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <div className="text-4xl mb-3">🚂</div>
+                      <div className="font-semibold text-gray-800 text-lg mb-2">
+                        철도법령
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        철도법령 관련 통계 보기
+                      </div>
+                    </button>
                   </div>
                 </div>
               ) : (
                 <div>
-                  {/* 과목별 난이도 통계 */}
-                  <div className="mb-4">
+                  {/* 뒤로가기 버튼 */}
+                  <div className="mb-6">
                     <button
-                      onClick={() => setSelectedSubjectForStats(null)}
-                      className="text-blue-500 hover:text-blue-700 mb-4"
+                      onClick={() => setSelectedStatsSubject(null)}
+                      className="text-blue-500 hover:text-blue-700 mb-4 flex items-center"
                     >
                       ← 과목 선택으로 돌아가기
                     </button>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-4">
-                      {
-                        subjects.find((s) => s.id === selectedSubjectForStats)
-                          ?.name
-                      }{" "}
-                      통계
+                    <h3 className="text-lg font-semibold text-gray-700">
+                      {selectedStatsSubject === "management"
+                        ? "경영학원론"
+                        : "철도법령"}{" "}
+                      상세 통계
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    {["매우쉬움", "쉬움", "중간", "어려움", "매우어려움"].map(
-                      (difficulty) => {
-                        const stats = userProgress.difficultyStats[
-                          difficulty
-                        ] || {
-                          attempts: 0,
-                          totalScore: 0,
-                          averageScore: 0,
-                        };
-                        const isUnlocked =
-                          userProgress.unlockedDifficulties.includes(
-                            difficulty
+                  {/* 통계 내용 */}
+                  <div className="space-y-6">
+                    {selectedStatsSubject === "management" ? (
+                      // 경영학원론 통계
+                      <div className="space-y-6">
+                        {[
+                          {
+                            name: "경영학원론",
+                            icon: "📊",
+                            color: "bg-blue-100 border-blue-200",
+                            subjectName: "경영학원론",
+                          },
+                          {
+                            name: "인사관리",
+                            icon: "👥",
+                            color: "bg-green-100 border-green-200",
+                            subjectName: "인사관리",
+                          },
+                          {
+                            name: "마케팅",
+                            icon: "📈",
+                            color: "bg-purple-100 border-purple-200",
+                            subjectName: "마케팅",
+                          },
+                        ].map((subject) => {
+                          const subjectDifficultyStats =
+                            ProgressManager.getSubjectDifficultyStats(
+                              subject.subjectName
+                            );
+
+                          return (
+                            <div
+                              key={subject.name}
+                              className={`rounded-lg border-2 ${subject.color} p-6`}
+                            >
+                              <div className="flex items-center mb-4">
+                                <div className="text-3xl mr-3">
+                                  {subject.icon}
+                                </div>
+                                <h4 className="text-xl font-bold text-gray-800">
+                                  {subject.name}
+                                </h4>
+                              </div>
+
+                              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                {[
+                                  "매우쉬움",
+                                  "쉬움",
+                                  "보통",
+                                  "어려움",
+                                  "매우어려움",
+                                ].map((difficulty) => {
+                                  const stats = subjectDifficultyStats[
+                                    difficulty
+                                  ] || {
+                                    attempts: 0,
+                                    totalScore: 0,
+                                    averageScore: 0,
+                                  };
+                                  const isUnlocked =
+                                    userProgress.unlockedDifficulties.includes(
+                                      difficulty
+                                    );
+
+                                  return (
+                                    <div
+                                      key={difficulty}
+                                      className={`bg-white rounded-lg p-3 text-center ${
+                                        isUnlocked
+                                          ? "border-2 border-green-300 shadow-sm"
+                                          : "border-2 border-gray-200 opacity-60"
+                                      }`}
+                                    >
+                                      <div className="text-sm font-bold text-gray-700 mb-1">
+                                        {difficulty}
+                                        {isUnlocked ? " ✓" : " 🔒"}
+                                      </div>
+                                      <div className="text-xs text-gray-600 space-y-1">
+                                        <div>풀이: {stats.attempts}번</div>
+                                        <div>평균: {stats.averageScore}점</div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      // 철도법령 통계
+                      [
+                        {
+                          name: "철도산업발전기본법(기본법+시행령)",
+                          icon: "🏛️",
+                          color: "bg-red-100 border-red-200",
+                          subjectName: "철도산업발전기본법(기본법+시행령)",
+                        },
+                        {
+                          name: "철도산업법(기본법+시행령)",
+                          icon: "🚂",
+                          color: "bg-blue-100 border-blue-200",
+                          subjectName: "철도산업법(기본법+시행령)",
+                        },
+                        {
+                          name: "철도공사법(기본법+시행령)",
+                          icon: "🏢",
+                          color: "bg-green-100 border-green-200",
+                          subjectName: "철도공사법(기본법+시행령)",
+                        },
+                        {
+                          name: "전체 통합",
+                          icon: "📚",
+                          color: "bg-purple-100 border-purple-200",
+                          subjectName: "전체 통합",
+                        },
+                      ].map((law) => {
+                        const subjectDifficultyStats =
+                          ProgressManager.getSubjectDifficultyStats(
+                            law.subjectName
                           );
 
                         return (
                           <div
-                            key={difficulty}
-                            className={`bg-gray-50 rounded-lg p-4 text-center ${
-                              isUnlocked
-                                ? "border-2 border-green-200"
-                                : "border-2 border-gray-200 opacity-60"
-                            }`}
+                            key={law.name}
+                            className={`rounded-lg border-2 ${law.color} p-6`}
                           >
-                            <div className="text-lg font-bold text-gray-800 mb-2">
-                              {difficulty}
-                              {isUnlocked ? " ✓" : " 🔒"}
+                            <div className="flex items-center mb-4">
+                              <div className="text-3xl mr-3">{law.icon}</div>
+                              <h4 className="text-xl font-bold text-gray-800">
+                                {law.name}
+                              </h4>
                             </div>
-                            <div className="text-sm text-gray-600">
-                              <div>풀이: {stats.attempts}번</div>
-                              <div>
-                                평균:{" "}
-                                {Number(stats.averageScore || 0).toFixed(2)}점
-                              </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                              {[
+                                "매우쉬움",
+                                "쉬움",
+                                "보통",
+                                "어려움",
+                                "매우어려움",
+                              ].map((difficulty) => {
+                                const stats = subjectDifficultyStats[
+                                  difficulty
+                                ] || {
+                                  attempts: 0,
+                                  totalScore: 0,
+                                  averageScore: 0,
+                                };
+                                const isUnlocked =
+                                  userProgress.unlockedDifficulties.includes(
+                                    difficulty
+                                  );
+
+                                return (
+                                  <div
+                                    key={difficulty}
+                                    className={`bg-white rounded-lg p-3 text-center ${
+                                      isUnlocked
+                                        ? "border-2 border-green-300 shadow-sm"
+                                        : "border-2 border-gray-200 opacity-60"
+                                    }`}
+                                  >
+                                    <div className="text-sm font-bold text-gray-700 mb-1">
+                                      {difficulty}
+                                      {isUnlocked ? " ✓" : " 🔒"}
+                                    </div>
+                                    <div className="text-xs text-gray-600 space-y-1">
+                                      <div>풀이: {stats.attempts}번</div>
+                                      <div>평균: {stats.averageScore}점</div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         );
-                      }
+                      })
                     )}
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 초기화 확인 모달 */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              {/* 모달 헤더 */}
+              <div className="text-center mb-6">
+                <div className="text-6xl mb-4">⚠️</div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  데이터 초기화
+                </h2>
+                <p className="text-gray-600">
+                  모든 데이터 및 해당과목으로 얻은 포인트는 없어집니다
+                </p>
+              </div>
+
+              {/* 확인 메시지 */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-red-800 text-sm">
+                  <strong>주의:</strong> 이 작업은 되돌릴 수 없습니다.
+                  {selectedSubjectToReset === "management"
+                    ? "경영학원론"
+                    : "철도법령"}{" "}
+                  관련 모든 학습 데이터가 삭제됩니다.
+                </p>
+              </div>
+
+              {/* 버튼들 */}
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleResetCancel}
+                  className="flex-1 py-3 px-4 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleResetConfirm}
+                  className="flex-1 py-3 px-4 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                >
+                  예, 초기화합니다
+                </button>
+              </div>
             </div>
           </div>
         </div>

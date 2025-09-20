@@ -136,38 +136,48 @@ export class ProgressManager {
   ): { newProgress: UserProgress; pointsEarned: number; score: number } {
     const currentProgress = this.getUserProgress();
 
+    // 중복 체크: 같은 퀴즈 세션 ID가 이미 존재하는지 확인
+    const existingRecord = currentProgress.questionHistory.find(
+      (record) => record.questionId === session.id
+    );
+
+    if (existingRecord) {
+      console.log("이미 처리된 퀴즈 세션입니다:", session.id);
+      // 기존 데이터 반환
+      return {
+        newProgress: currentProgress,
+        pointsEarned: 0,
+        score: existingRecord.score,
+      };
+    }
+
     // 점수 계산
     let correctAnswers = 0;
-    const questionHistory: QuestionHistory[] = [];
-
     userAnswers.forEach((answer, index) => {
       const question = questions[index];
       const isCorrect = answer === question.correctAnswer;
-
       if (isCorrect) correctAnswers++;
-
-      questionHistory.push({
-        questionId: question.id,
-        userAnswer: answer,
-        isCorrect,
-        score: isCorrect ? 100 : 0,
-        completedAt: new Date().toISOString(),
-        difficulty: question.difficulty,
-        subject: question.subject,
-      });
     });
 
     const score = Math.round((correctAnswers / questions.length) * 100);
     const pointsEarned = correctAnswers; // 맞힌 문제 수만큼 포인트 획득
 
+    // 퀴즈 세션을 하나의 단위로 기록
+    const quizRecord: QuestionHistory = {
+      questionId: session.id, // 퀴즈 세션 ID 사용
+      userAnswer: 0, // 퀴즈 전체 점수
+      isCorrect: score >= DIFFICULTY_THRESHOLDS[session.difficulty],
+      score: score, // 퀴즈 전체 점수
+      completedAt: new Date().toISOString(),
+      difficulty: session.difficulty,
+      subject: session.subject,
+    };
+
     // 새로운 진도 계산
-    const newQuestionHistory = [
-      ...currentProgress.questionHistory,
-      ...questionHistory,
-    ];
+    const newQuestionHistory = [...currentProgress.questionHistory, quizRecord];
     const newTotalPoints = currentProgress.totalPoints + pointsEarned;
 
-    // 평균 점수 재계산
+    // 평균 점수 재계산 (퀴즈 세션별 점수로 계산)
     const allScores = newQuestionHistory.map((h) => h.score);
     const newAverageScore =
       allScores.length > 0
@@ -222,6 +232,17 @@ export class ProgressManager {
     completedDifficulties: string[];
   } {
     const progress = this.getUserProgress();
+
+    // questionHistory가 존재하지 않는 경우 기본값 반환
+    if (!progress.questionHistory || !Array.isArray(progress.questionHistory)) {
+      return {
+        totalQuestions: 0,
+        correctAnswers: 0,
+        averageScore: 0,
+        completedDifficulties: [],
+      };
+    }
+
     const subjectHistory = progress.questionHistory.filter(
       (h) => h.subject === subject
     );
@@ -245,5 +266,165 @@ export class ProgressManager {
       averageScore,
       completedDifficulties,
     };
+  }
+
+  // 특정 과목의 난이도별 통계 가져오기
+  static getSubjectDifficultyStats(subject: string): {
+    [difficulty: string]: {
+      attempts: number;
+      totalScore: number;
+      averageScore: number;
+    };
+  } {
+    const progress = this.getUserProgress();
+
+    // questionHistory가 존재하지 않는 경우 기본값 반환
+    if (!progress.questionHistory || !Array.isArray(progress.questionHistory)) {
+      const emptyStats: {
+        [difficulty: string]: {
+          attempts: number;
+          totalScore: number;
+          averageScore: number;
+        };
+      } = {};
+
+      ["매우쉬움", "쉬움", "보통", "어려움", "매우어려움"].forEach(
+        (difficulty) => {
+          emptyStats[difficulty] = {
+            attempts: 0,
+            totalScore: 0,
+            averageScore: 0,
+          };
+        }
+      );
+
+      return emptyStats;
+    }
+
+    const subjectHistory = progress.questionHistory.filter(
+      (h) => h.subject === subject
+    );
+
+    const difficultyStats: {
+      [difficulty: string]: {
+        attempts: number;
+        totalScore: number;
+        averageScore: number;
+      };
+    } = {};
+
+    // 모든 난이도 초기화
+    ["매우쉬움", "쉬움", "보통", "어려움", "매우어려움"].forEach(
+      (difficulty) => {
+        difficultyStats[difficulty] = {
+          attempts: 0,
+          totalScore: 0,
+          averageScore: 0,
+        };
+      }
+    );
+
+    // 과목별 난이도 통계 계산 (subjectHistory가 존재하는 경우에만)
+    if (subjectHistory && Array.isArray(subjectHistory)) {
+      subjectHistory.forEach((history) => {
+        const difficulty = history.difficulty;
+        if (difficultyStats[difficulty]) {
+          difficultyStats[difficulty].attempts += 1;
+          difficultyStats[difficulty].totalScore += history.score;
+        }
+      });
+    }
+
+    // 평균 점수 계산
+    Object.keys(difficultyStats).forEach((difficulty) => {
+      const stats = difficultyStats[difficulty];
+      if (stats.attempts > 0) {
+        stats.averageScore = Math.round(stats.totalScore / stats.attempts);
+      }
+    });
+
+    return difficultyStats;
+  }
+
+  // 전체 난이도별 통계 가져오기
+  static getDifficultyStats(): {
+    [difficulty: string]: {
+      attempts: number;
+      totalScore: number;
+      averageScore: number;
+    };
+  } {
+    const progress = this.getUserProgress();
+    const difficultyStats: {
+      [difficulty: string]: {
+        attempts: number;
+        totalScore: number;
+        averageScore: number;
+      };
+    } = {};
+
+    // 모든 난이도 초기화
+    ["매우쉬움", "쉬움", "보통", "어려움", "매우어려움"].forEach(
+      (difficulty) => {
+        difficultyStats[difficulty] = {
+          attempts: 0,
+          totalScore: 0,
+          averageScore: 0,
+        };
+      }
+    );
+
+    // 전체 난이도 통계 계산 (questionHistory가 존재하는 경우에만)
+    if (progress.questionHistory && Array.isArray(progress.questionHistory)) {
+      progress.questionHistory.forEach((history) => {
+        const difficulty = history.difficulty;
+        if (difficultyStats[difficulty]) {
+          difficultyStats[difficulty].attempts += 1;
+          difficultyStats[difficulty].totalScore += history.score;
+        }
+      });
+    }
+
+    // 평균 점수 계산 및 타입/데이터 체크
+    Object.keys(difficultyStats).forEach((difficulty) => {
+      const stats = difficultyStats[difficulty];
+      // 타입 및 데이터 유효성 체크
+      if (
+        stats &&
+        typeof stats.attempts === "number" &&
+        typeof stats.totalScore === "number"
+      ) {
+        if (stats.attempts > 0) {
+          stats.averageScore = Math.round(stats.totalScore / stats.attempts);
+        } else {
+          stats.averageScore = 0;
+        }
+      } else {
+        // 콘솔 경고 출력
+        console.warn(
+          `[getDifficultyStats] Invalid stats for difficulty "${difficulty}":`,
+          stats
+        );
+        // 잘못된 데이터일 경우 0으로 초기화
+        stats.attempts = 0;
+        stats.totalScore = 0;
+        stats.averageScore = 0;
+      }
+    });
+
+    // 반환 전 타입 및 데이터 체크
+    if (
+      typeof difficultyStats !== "object" ||
+      difficultyStats === null ||
+      Array.isArray(difficultyStats)
+    ) {
+      console.error(
+        "[getDifficultyStats] difficultyStats is not a valid object:",
+        difficultyStats
+      );
+      return {};
+    }
+
+    return difficultyStats;
   }
 }

@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Question } from "../../data/types";
+import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { Question, QuizSession } from "../../data/types";
+import { ProgressManager } from "../../data/questionManager";
 
 interface ResultData {
   score: number;
@@ -13,20 +14,69 @@ interface ResultData {
 const ResultPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { subject, difficulty } = useParams<{
+    subjectType: string;
+    subject: string;
+    difficulty: string;
+  }>();
   const [resultData, setResultData] = useState<ResultData | null>(null);
   const [userProgress, setUserProgress] = useState({
     averageScore: 0,
     totalPoints: 0,
     completedQuizzes: 0,
   });
-  const hasUpdatedProgress = useRef(false); // 중복 업데이트 방지
+  const updateUserProgress = useCallback(
+    (data: ResultData) => {
+      // 선택한 과목명과 난이도 사용
+      const subjectName = subject || "";
+      const difficultyLevel = difficulty || "";
+
+      // 퀴즈 세션 ID 생성 (고정된 ID 사용 - 같은 결과에 대해서는 동일한 ID)
+      const quizSessionId = `quiz_${subjectName}_${difficultyLevel}_${data.score}_${data.correctAnswers}`;
+
+      // 퀴즈 세션 생성
+      const quizSession: QuizSession = {
+        id: quizSessionId,
+        subject: subjectName,
+        difficulty: difficultyLevel,
+        questions: data.questions,
+        currentQuestionIndex: data.questions.length - 1,
+        userAnswers: data.userAnswers as number[],
+        startTime: new Date().toISOString(),
+        endTime: new Date().toISOString(),
+        score: data.score,
+        isCompleted: true,
+      };
+
+      // ProgressManager를 사용하여 결과 처리 (중복 체크는 ProgressManager에서 처리)
+      const result = ProgressManager.processQuizResult(
+        quizSession,
+        data.userAnswers as number[],
+        data.questions
+      );
+
+      // 사용자 진도 업데이트
+      setUserProgress({
+        averageScore: result.newProgress.averageScore,
+        totalPoints: result.newProgress.totalPoints,
+        completedQuizzes: result.newProgress.questionHistory.length,
+      });
+
+      console.log("퀴즈 결과 처리 완료:", {
+        score: result.score,
+        pointsEarned: result.pointsEarned,
+        newProgress: result.newProgress,
+        quizSessionId: quizSessionId,
+      });
+    },
+    [subject, difficulty]
+  );
 
   useEffect(() => {
     console.log("ResultPage - location.state:", location.state);
     console.log("ResultPage - location.pathname:", location.pathname);
 
-    if (location.state && !hasUpdatedProgress.current) {
-      hasUpdatedProgress.current = true;
+    if (location.state) {
       const state = location.state as ResultData;
       console.log("ResultPage - 받은 데이터:", {
         score: state.score,
@@ -38,97 +88,11 @@ const ResultPage: React.FC = () => {
 
       setResultData(state);
       updateUserProgress(state);
-    } else if (!location.state) {
+    } else {
       console.log("ResultPage - 결과 데이터가 없음, 메인으로 리다이렉트");
       navigate("/");
     }
-  }, [location.state, navigate]);
-
-  const updateUserProgress = (data: ResultData) => {
-    // 로컬 스토리지에서 기존 진도 로드
-    const existingProgress = JSON.parse(
-      localStorage.getItem("userProgress") || "{}"
-    );
-
-    // 현재 난이도 가져오기
-    const pathParts = location.pathname.split("/");
-    const currentDifficulty = pathParts[3];
-
-    // 난이도별 통계 업데이트
-    const difficultyStats = existingProgress.difficultyStats || {};
-    const currentStats = difficultyStats[currentDifficulty] || {
-      attempts: 0,
-      totalScore: 0,
-      averageScore: 0,
-    };
-
-    const newAttempts = currentStats.attempts + 1;
-    const newTotalScore = currentStats.totalScore + data.score;
-    const newAverageScore = newTotalScore / newAttempts;
-
-    difficultyStats[currentDifficulty] = {
-      attempts: newAttempts,
-      totalScore: newTotalScore,
-      averageScore: newAverageScore,
-    };
-
-    // 해금된 난이도 체크
-    const difficultyUnlockConditions = {
-      쉬움: { minAttempts: 5, minAverage: 60 },
-      중간: { minAttempts: 10, minAverage: 70 },
-      어려움: { minAttempts: 15, minAverage: 80 },
-      매우어려움: { minAttempts: 20, minAverage: 90 },
-    };
-
-    const unlockedDifficulties = existingProgress.unlockedDifficulties || [
-      "매우쉬움",
-    ];
-    const veryEasyStats = difficultyStats["매우쉬움"] || {
-      attempts: 0,
-      totalScore: 0,
-      averageScore: 0,
-    };
-
-    Object.keys(difficultyUnlockConditions).forEach((difficulty) => {
-      const condition =
-        difficultyUnlockConditions[
-          difficulty as keyof typeof difficultyUnlockConditions
-        ];
-      if (
-        !unlockedDifficulties.includes(difficulty) &&
-        veryEasyStats.attempts >= condition.minAttempts &&
-        veryEasyStats.averageScore >= condition.minAverage
-      ) {
-        unlockedDifficulties.push(difficulty);
-      }
-    });
-
-    // 전체 평균 점수 계산 (모든 난이도의 평균)
-    const allStats = Object.values(difficultyStats);
-    const totalAttempts: number = allStats.reduce(
-      (sum: number, stat: any) => sum + (stat.attempts || 0),
-      0
-    );
-    const totalScore: number = allStats.reduce(
-      (sum: number, stat: any) => sum + (stat.totalScore || 0),
-      0
-    );
-    const overallAverage = totalAttempts > 0 ? totalScore / totalAttempts : 0;
-
-    const newProgress = {
-      ...existingProgress,
-      averageScore: overallAverage, // 전체 평균 점수
-      totalPoints: (existingProgress.totalPoints || 0) + data.score,
-      completedQuizzes: (existingProgress.completedQuizzes || 0) + 1, // 1개씩만 증가
-      lastQuizScore: data.score,
-      lastQuizDate: new Date().toISOString(),
-      difficultyStats,
-      unlockedDifficulties,
-    };
-
-    setUserProgress(newProgress);
-    localStorage.setItem("userProgress", JSON.stringify(newProgress));
-  };
+  }, [location.state, location.pathname, navigate, updateUserProgress]);
 
   const getGradeInfo = (score: number) => {
     if (score >= 90)
@@ -321,7 +285,28 @@ const ResultPage: React.FC = () => {
           </button>
         </div>
 
-        {/* 사용자 통계 */}
+        {/* 
+          [로직 설명]
+
+          1. 문제풀이 완료시
+            - 사용자가 퀴즈를 모두 풀고 결과 페이지에 도달하면, 
+              userProgress 객체(혹은 상태)에 평균 점수(averageScore)와 완료한 퀴즈 수(completedQuizzes)가 저장되어 있습니다.
+            - 이 값들은 아마도 로컬스토리지 또는 전역 상태(예: context, redux 등)에 저장되어, 
+              결과 페이지에서 바로 불러와서 아래처럼 표시합니다.
+
+          2. 완료시 새로고침 후 어떻게 반영이 되는지
+            - 새로고침을 하면, userProgress를 다시 불러오게 됩니다.
+            - 만약 userProgress가 로컬스토리지 등 영속 저장소에 저장되어 있다면, 
+              새로고침 후에도 평균 점수와 완료한 퀴즈 수가 유지되어 반영됩니다.
+            - 만약 상태가 메모리(예: useState)만 사용한다면 새로고침 시 초기화되어 값이 사라집니다.
+
+          3. 여기에 풀이횟수와 평균점수가 있는거같은데, 메인페이지 및 과목 난이도별 횟수와 점수가 반영이 안되는 이유
+            - 이 부분은 전체 사용자 진행(userProgress)만을 보여주고 있습니다.
+            - 메인페이지나 과목/난이도별로 풀이횟수와 점수를 보여주려면, 
+              각 과목/난이도별로 별도의 통계(예: questionManager.getDifficultyStats() 등)를 불러와야 합니다.
+            - 현재 이 코드에서는 userProgress의 전체 평균/완료수만 사용하고, 
+              과목별/난이도별 세부 통계는 불러오지 않으므로, 메인페이지 및 과목 난이도별 통계가 반영되지 않습니다.
+        */}
         <div className="text-center mt-8">
           <p className="text-gray-500 text-sm">
             평균 점수: {Number(userProgress.averageScore || 0).toFixed(2)}점 |
