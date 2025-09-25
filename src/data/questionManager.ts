@@ -112,15 +112,45 @@ export class ProgressManager {
   // 사용자 진도 가져오기
   static getUserProgress(): UserProgress {
     const progress = localStorage.getItem(STORAGE_KEYS.USER_PROGRESS);
-    return progress
-      ? JSON.parse(progress)
-      : {
-          averageScore: 0,
-          totalPoints: 0,
-          unlockedDifficulties: ["매우쉬움"],
-          completedSubjects: [],
-          questionHistory: [],
+    if (progress) {
+      try {
+        const parsedProgress = JSON.parse(progress);
+        // 파싱된 데이터의 유효성 검사
+        return {
+          averageScore:
+            typeof parsedProgress.averageScore === "number"
+              ? parsedProgress.averageScore
+              : 0,
+          totalPoints:
+            typeof parsedProgress.totalPoints === "number"
+              ? parsedProgress.totalPoints
+              : 0,
+          unlockedDifficulties: Array.isArray(
+            parsedProgress.unlockedDifficulties
+          )
+            ? parsedProgress.unlockedDifficulties
+            : ["매우쉬움"],
+          completedSubjects: Array.isArray(parsedProgress.completedSubjects)
+            ? parsedProgress.completedSubjects
+            : [],
+          questionHistory: Array.isArray(parsedProgress.questionHistory)
+            ? parsedProgress.questionHistory
+            : [],
         };
+      } catch (error) {
+        console.error("Failed to parse user progress:", error);
+        // 파싱 실패 시 기본값 반환
+      }
+    }
+
+    // 기본값 반환
+    return {
+      averageScore: 0,
+      totalPoints: 0,
+      unlockedDifficulties: ["매우쉬움"],
+      completedSubjects: [],
+      questionHistory: [],
+    };
   }
 
   // 사용자 진도 저장하기
@@ -135,6 +165,14 @@ export class ProgressManager {
     questions: Question[]
   ): { newProgress: UserProgress; pointsEarned: number; score: number } {
     const currentProgress = this.getUserProgress();
+
+    // questionHistory가 undefined이거나 배열이 아닌 경우 빈 배열로 초기화
+    if (
+      !currentProgress.questionHistory ||
+      !Array.isArray(currentProgress.questionHistory)
+    ) {
+      currentProgress.questionHistory = [];
+    }
 
     // 중복 체크: 같은 퀴즈 세션 ID가 이미 존재하는지 확인
     const existingRecord = currentProgress.questionHistory.find(

@@ -50,7 +50,7 @@ export const POINTS_PER_QUESTION = 1; // 문제당 획득 포인트
 export const POINTS_FOR_DIFFICULTY_UNLOCK = 5; // 난이도 해금에 필요한 포인트
 
 // 퀴즈 설정 상수
-export const QUIZ_QUESTIONS_COUNT = 5; // 퀴즈당 문제 수
+export const QUIZ_QUESTIONS_COUNT = 10; // 퀴즈당 문제 수
 
 // 로컬 스토리지 키 상수
 export const STORAGE_KEYS = {

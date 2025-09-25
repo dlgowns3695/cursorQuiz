@@ -26,6 +26,7 @@ export class QuestionService {
     // 철도 관련 문제들을 맵에 저장
     const railwayQuestions = [
       // 철도산업발전기본법
+      ...railwayBasicLaw.철도산업발전기본법_매우쉬움,
       ...railwayBasicLaw.철도산업발전기본법_쉬움,
       ...railwayBasicLaw.철도산업발전기본법_보통,
       ...railwayBasicLaw.철도산업발전기본법_어려움,
@@ -216,7 +217,7 @@ export class QuestionService {
     subjectType: "management" | "railway",
     subject: string,
     difficulty: string,
-    count: number = 5
+    count: number = 10
   ): Question[] {
     const filteredQuestions = this.getQuestionsBySubjectAndDifficultyNew(
       subjectType,
