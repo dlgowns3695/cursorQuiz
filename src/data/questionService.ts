@@ -1,5 +1,7 @@
 import { Question } from "./types";
-import { managementQuestions } from "./questions/managementQuestions";
+import * as managementTheory from "./questions/management/managementTheory";
+import * as marketingManagement from "./questions/management/marketingManagement";
+import * as personnelManagement from "./questions/management/personnelManagement";
 
 // 철도 관련 문제들 import
 import * as railwayBasicLaw from "./questions/railway/railway_basic_law";
@@ -20,10 +22,32 @@ export class QuestionService {
   }
 
   private initializeQuestions() {
-    // 경영학 문제들
-    this.questions = [...managementQuestions];
+    // 경영학 문제들을 수집
+    const managementQuestions = [
+      // 경영학원론
+      ...managementTheory.경영학원론_매우쉬움,
+      ...managementTheory.경영학원론_쉬움,
+      ...managementTheory.경영학원론_보통,
+      ...managementTheory.경영학원론_어려움,
+      ...managementTheory.경영학원론_매우어려움,
+      // 마케팅관리
+      ...marketingManagement.마케팅관리_매우쉬움,
+      ...marketingManagement.마케팅관리_쉬움,
+      ...marketingManagement.마케팅관리_보통,
+      ...marketingManagement.마케팅관리_어려움,
+      ...marketingManagement.마케팅관리_매우어려움,
+      // 인사관리
+      ...personnelManagement.인사관리_매우쉬움,
+      ...personnelManagement.인사관리_쉬움,
+      ...personnelManagement.인사관리_보통,
+      ...personnelManagement.인사관리_어려움,
+      ...personnelManagement.인사관리_매우어려움,
+    ];
 
-    // 철도 관련 문제들을 맵에 저장
+    // 경영학 문제들을 랜덤하게 섞어서 저장
+    this.questions = this.shuffleArray(managementQuestions);
+
+    // 철도 관련 문제들을 수집
     const railwayQuestions = [
       // 철도산업발전기본법
       ...railwayBasicLaw.철도산업발전기본법_매우쉬움,
@@ -63,7 +87,9 @@ export class QuestionService {
       ...railwayCorporationLawRegulation.철도공사법_시행령_매우어려움,
     ];
 
-    this.questions = [...this.questions, ...railwayQuestions];
+    // 철도 문제들도 랜덤하게 섞어서 추가
+    const shuffledRailwayQuestions = this.shuffleArray(railwayQuestions);
+    this.questions = [...this.questions, ...shuffledRailwayQuestions];
   }
 
   private organizeQuestionsBySubjectAndDifficulty() {
@@ -96,7 +122,7 @@ export class QuestionService {
 
     const filtered = this.questions.filter((question) => {
       const subjectMatch =
-        (subjectType === "management" && question.subject.includes("경영")) ||
+        (subjectType === "management" && question.subject.includes("경영학")) ||
         (subjectType === "railway" && question.subject.includes("철도"));
       const difficultyMatch = question.difficulty === difficulty;
 
@@ -122,7 +148,7 @@ export class QuestionService {
   ): Question[] {
     return this.questions.filter(
       (question) =>
-        (subjectType === "management" && question.subject.includes("경영")) ||
+        (subjectType === "management" && question.subject.includes("경영학")) ||
         (subjectType === "railway" && question.subject.includes("철도"))
     );
   }
@@ -160,7 +186,15 @@ export class QuestionService {
       let subjectMatch = false;
 
       if (subjectType === "management") {
-        subjectMatch = question.subject.includes("경영");
+        if (subject === "경영학-경영학원론") {
+          subjectMatch = question.subject === "경영학-경영학원론";
+        } else if (subject === "경영학-인사관리") {
+          subjectMatch = question.subject === "경영학-인사관리";
+        } else if (subject === "경영학-마케팅관리") {
+          subjectMatch = question.subject === "경영학-마케팅관리";
+        } else if (subject === "전체 통합") {
+          subjectMatch = question.subject.includes("경영학");
+        }
       } else if (subjectType === "railway") {
         if (subject === "철도산업발전기본법(기본법+시행령)") {
           subjectMatch = question.subject.includes("철도산업발전기본법");
@@ -217,7 +251,7 @@ export class QuestionService {
     subjectType: "management" | "railway",
     subject: string,
     difficulty: string,
-    count: number = 10
+    count: number = 5
   ): Question[] {
     const filteredQuestions = this.getQuestionsBySubjectAndDifficultyNew(
       subjectType,
@@ -274,7 +308,7 @@ export class QuestionService {
   public getStatistics() {
     const totalQuestions = this.questions.length;
     const managementQuestions = this.questions.filter((q) =>
-      q.subject.includes("경영")
+      q.subject.includes("경영학")
     ).length;
     const railwayQuestions = this.questions.filter((q) =>
       q.subject.includes("철도")

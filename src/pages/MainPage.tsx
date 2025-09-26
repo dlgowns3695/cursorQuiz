@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ProgressManager } from "../data/questionManager";
 import { UserProgress } from "../data/types";
+import { QUIZ_QUESTIONS_COUNT } from "../data/constants";
 
 // 과목 정보 인터페이스
 interface Subject {
@@ -41,10 +42,10 @@ const MainPage: React.FC = () => {
   // 난이도 해금 조건
   const difficultyUnlockConditions = useMemo(
     () => ({
-      쉬움: { minAttempts: 5, minAverage: 60 },
-      중간: { minAttempts: 10, minAverage: 70 },
-      어려움: { minAttempts: 15, minAverage: 80 },
-      매우어려움: { minAttempts: 20, minAverage: 90 },
+      쉬움: { minAttempts: 5, minAverage: 65 },
+      보통: { minAttempts: 5, minAverage: 80 },
+      어려움: { minAttempts: 5, minAverage: 85 },
+      매우어려움: { minAttempts: 5, minAverage: 90 },
     }),
     []
   );
@@ -106,24 +107,22 @@ const MainPage: React.FC = () => {
   useEffect(() => {
     const progress = ProgressManager.getUserProgress();
 
-    // 해금된 난이도 체크
-    const unlockedDifficulties = ["매우쉬움"];
-    Object.keys(difficultyUnlockConditions).forEach((difficulty) => {
-      if (checkDifficultyUnlock(difficulty)) {
-        unlockedDifficulties.push(difficulty);
-      }
-    });
+    // 초기 상태 체크: questionHistory가 비어있으면 모든 값을 0으로 설정
+    const isInitialState =
+      !progress.questionHistory || progress.questionHistory.length === 0;
 
     const newProgress = {
-      averageScore: progress.averageScore,
-      totalPoints: progress.totalPoints,
-      unlockedDifficulties: unlockedDifficulties,
-      completedSubjects: progress.completedSubjects,
-      questionHistory: progress.questionHistory,
+      averageScore: isInitialState ? 0 : progress.averageScore,
+      totalPoints: isInitialState ? 0 : progress.totalPoints,
+      unlockedDifficulties: isInitialState
+        ? ["매우쉬움"]
+        : progress.unlockedDifficulties,
+      completedSubjects: isInitialState ? [] : progress.completedSubjects,
+      questionHistory: isInitialState ? [] : progress.questionHistory,
     };
 
     setUserProgress(newProgress);
-  }, [checkDifficultyUnlock, difficultyUnlockConditions]); // 필요한 의존성 추가
+  }, []);
 
   // 과목 선택 핸들러
   const handleSubjectSelect = (subject: Subject) => {
@@ -163,7 +162,14 @@ const MainPage: React.FC = () => {
         }
         return false;
       })
-      .reduce((sum, record) => sum + (record.isCorrect ? 1 : 0), 0);
+      .reduce((sum, record) => {
+        // 퀴즈 세션별로 획득한 포인트 계산
+        // score는 0-100 사이의 점수이므로, 이를 맞힌 문제 수로 변환
+        const correctAnswers = Math.round(
+          (record.score / 100) * QUIZ_QUESTIONS_COUNT
+        );
+        return sum + correctAnswers;
+      }, 0);
 
     // 새로운 진도 계산
     const newTotalPoints = Math.max(
@@ -178,10 +184,63 @@ const MainPage: React.FC = () => {
           )
         : 0;
 
+    // 해금된 난이도 재계산 (남은 과목들의 통계를 기반으로)
+    const remainingDifficulties = new Set<string>();
+    remainingDifficulties.add("매우쉬움"); // 기본 해금
+
+    // 남은 과목들의 난이도별 통계를 기반으로 해금 조건 체크
+    const remainingHistory = filteredHistory;
+    const difficultyStats: {
+      [key: string]: {
+        attempts: number;
+        totalScore: number;
+        averageScore: number;
+      };
+    } = {};
+
+    // 난이도별 통계 계산
+    remainingHistory.forEach((record) => {
+      const difficulty = record.difficulty;
+      if (!difficultyStats[difficulty]) {
+        difficultyStats[difficulty] = {
+          attempts: 0,
+          totalScore: 0,
+          averageScore: 0,
+        };
+      }
+      difficultyStats[difficulty].attempts += 1;
+      difficultyStats[difficulty].totalScore += record.score;
+    });
+
+    // 평균 점수 계산
+    Object.keys(difficultyStats).forEach((difficulty) => {
+      const stats = difficultyStats[difficulty];
+      stats.averageScore =
+        stats.attempts > 0 ? Math.round(stats.totalScore / stats.attempts) : 0;
+    });
+
+    // 해금 조건 체크
+    const { DIFFICULTY_UNLOCK_CONDITIONS } = require("../data/constants");
+    Object.keys(difficultyStats).forEach((difficulty) => {
+      if (difficulty === "매우쉬움") return;
+
+      const condition =
+        DIFFICULTY_UNLOCK_CONDITIONS[
+          difficulty as keyof typeof DIFFICULTY_UNLOCK_CONDITIONS
+        ];
+      if (
+        condition &&
+        difficultyStats[difficulty].attempts >= condition.minAttempts &&
+        difficultyStats[difficulty].averageScore >= condition.minScore
+      ) {
+        remainingDifficulties.add(difficulty);
+      }
+    });
+
     const newProgress: UserProgress = {
       averageScore: newAverageScore,
       totalPoints: newTotalPoints,
-      unlockedDifficulties: currentProgress.unlockedDifficulties,
+      unlockedDifficulties: Array.from(remainingDifficulties),
       completedSubjects: currentProgress.completedSubjects.filter((subject) => {
         if (selectedSubjectToReset === "management") {
           return !subject.includes("경영");
@@ -223,7 +282,7 @@ const MainPage: React.FC = () => {
           <h1 className="text-center font-bold text-red-600 mb-4">
             공부시작해!!
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-600 text-center">
             반복적인 학습을 통해 철도법령을 마스터하세요
           </p>
         </div>
@@ -328,7 +387,7 @@ const MainPage: React.FC = () => {
                     >
                       <div className="text-4xl mb-3">📊</div>
                       <div className="font-semibold text-gray-800 text-lg mb-2">
-                        경영학원론
+                        경영학
                       </div>
                       <div className="text-sm text-gray-600">
                         경영학 관련 통계 보기
@@ -362,7 +421,7 @@ const MainPage: React.FC = () => {
                     </button>
                     <h3 className="text-lg font-semibold text-gray-700">
                       {selectedStatsSubject === "management"
-                        ? "경영학원론"
+                        ? "경영학"
                         : "철도법령"}{" "}
                       상세 통계
                     </h3>
@@ -371,26 +430,26 @@ const MainPage: React.FC = () => {
                   {/* 통계 내용 */}
                   <div className="space-y-6">
                     {selectedStatsSubject === "management" ? (
-                      // 경영학원론 통계
+                      // 경영학 통계
                       <div className="space-y-6">
                         {[
                           {
                             name: "경영학원론",
                             icon: "📊",
                             color: "bg-blue-100 border-blue-200",
-                            subjectName: "경영학원론",
+                            subjectName: "경영학-경영학원론",
                           },
                           {
                             name: "인사관리",
                             icon: "👥",
                             color: "bg-green-100 border-green-200",
-                            subjectName: "인사관리",
+                            subjectName: "경영학-인사관리",
                           },
                           {
-                            name: "마케팅",
+                            name: "마케팅관리",
                             icon: "📈",
                             color: "bg-purple-100 border-purple-200",
-                            subjectName: "마케팅",
+                            subjectName: "경영학-마케팅관리",
                           },
                         ].map((subject) => {
                           const subjectDifficultyStats =

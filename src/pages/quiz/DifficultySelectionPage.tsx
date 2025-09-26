@@ -33,14 +33,6 @@ const DifficultySelectionPage: React.FC = () => {
 
   const subjectName = subjectType === "management" ? "경영학" : "철도법령";
 
-  // 난이도 해금 조건
-  const difficultyUnlockConditions = {
-    쉬움: { minAttempts: 5, minAverage: 60 },
-    중간: { minAttempts: 10, minAverage: 70 },
-    어려움: { minAttempts: 15, minAverage: 80 },
-    매우어려움: { minAttempts: 20, minAverage: 90 },
-  };
-
   // 사용자 진도 로드
   useEffect(() => {
     const progress = ProgressManager.getUserProgress();
@@ -66,31 +58,26 @@ const DifficultySelectionPage: React.FC = () => {
       name: "매우쉬움",
       color: "bg-green-500",
       description: "기초 문제",
-      unlockCondition: null,
     },
     {
       name: "쉬움",
       color: "bg-blue-500",
       description: "초급 문제",
-      unlockCondition: difficultyUnlockConditions.쉬움,
     },
     {
-      name: "중간",
+      name: "보통",
       color: "bg-yellow-500",
       description: "중급 문제",
-      unlockCondition: difficultyUnlockConditions.중간,
     },
     {
       name: "어려움",
       color: "bg-orange-500",
       description: "고급 문제",
-      unlockCondition: difficultyUnlockConditions.어려움,
     },
     {
       name: "매우어려움",
       color: "bg-red-500",
       description: "최고급 문제",
-      unlockCondition: difficultyUnlockConditions.매우어려움,
     },
   ];
 
@@ -104,12 +91,6 @@ const DifficultySelectionPage: React.FC = () => {
   const checkUnlockCondition = (difficulty: string) => {
     if (difficulty === "매우쉬움") return null;
 
-    const condition =
-      difficultyUnlockConditions[
-        difficulty as keyof typeof difficultyUnlockConditions
-      ];
-    if (!condition) return null;
-
     // ProgressManager를 사용하여 실제 통계 가져오기
     const difficultyStats = ProgressManager.getDifficultyStats();
     const stats = difficultyStats[difficulty] || {
@@ -117,13 +98,22 @@ const DifficultySelectionPage: React.FC = () => {
       totalScore: 0,
       averageScore: 0,
     };
+
+    // DIFFICULTY_UNLOCK_CONDITIONS를 사용하여 해금 조건 체크
+    const { DIFFICULTY_UNLOCK_CONDITIONS } = require("../../data/constants");
+    const condition =
+      DIFFICULTY_UNLOCK_CONDITIONS[
+        difficulty as keyof typeof DIFFICULTY_UNLOCK_CONDITIONS
+      ];
+
     return {
-      ...condition,
+      minAttempts: condition.minAttempts,
+      minAverage: condition.minScore,
       currentAttempts: stats.attempts,
       currentAverage: stats.averageScore,
       isUnlocked:
         stats.attempts >= condition.minAttempts &&
-        stats.averageScore >= condition.minAverage,
+        stats.averageScore >= condition.minScore,
     };
   };
 
@@ -134,9 +124,8 @@ const DifficultySelectionPage: React.FC = () => {
       if (condition) {
         alert(
           `🔒 ${difficulty} 난이도 해금 조건\n\n` +
-            `• ${condition.minAttempts}번 이상 풀이 (현재: ${condition.currentAttempts}번)\n` +
             `• 평균 ${condition.minAverage}점 이상 (현재: ${condition.currentAverage}점)\n\n` +
-            `매우쉬움 난이도를 먼저 완주해주세요!`
+            `이전 난이도를 먼저 완주해주세요!`
         );
         return;
       }

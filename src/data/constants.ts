@@ -6,7 +6,12 @@ export const SUBJECTS: Subject[] = [
     id: "management",
     name: "경영학 시작하기",
     type: "management",
-    subjects: ["경영학원론", "인사관리", "마케팅관리", "전체 통합"],
+    subjects: [
+      "경영학-경영학원론",
+      "경영학-인사관리",
+      "경영학-마케팅관리",
+      "전체 통합",
+    ],
     description: "경영학 기초부터 고급까지 체계적 학습",
     icon: "📊",
     color: "bg-blue-500",
@@ -30,10 +35,19 @@ export const SUBJECTS: Subject[] = [
 // 난이도별 통과 점수 상수
 export const DIFFICULTY_THRESHOLDS: DifficultyThreshold = {
   매우쉬움: 60,
-  쉬움: 70,
+  쉬움: 65,
   보통: 80,
   어려움: 85,
   매우어려움: 90,
+};
+
+// 난이도별 해금 조건 (시도 횟수 + 점수)
+export const DIFFICULTY_UNLOCK_CONDITIONS = {
+  매우쉬움: { minAttempts: 0, minScore: 0 }, // 기본 해금
+  쉬움: { minAttempts: 5, minScore: 65 },
+  보통: { minAttempts: 5, minScore: 80 },
+  어려움: { minAttempts: 5, minScore: 85 },
+  매우어려움: { minAttempts: 5, minScore: 90 },
 };
 
 // 난이도 순서 (해금 순서)

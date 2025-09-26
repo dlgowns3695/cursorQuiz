@@ -3,6 +3,7 @@ import {
   STORAGE_KEYS,
   DIFFICULTY_THRESHOLDS,
   DIFFICULTY_ORDER,
+  DIFFICULTY_UNLOCK_CONDITIONS,
 } from "./constants";
 
 // 문제 관리 클래스
@@ -116,6 +117,37 @@ export class ProgressManager {
       try {
         const parsedProgress = JSON.parse(progress);
         // 파싱된 데이터의 유효성 검사
+        const unlockedDifficulties = Array.isArray(
+          parsedProgress.unlockedDifficulties
+        )
+          ? parsedProgress.unlockedDifficulties
+          : ["매우쉬움"];
+
+        // 초기 상태에서 잘못된 해금 상태 방지
+        const questionHistory = Array.isArray(parsedProgress.questionHistory)
+          ? parsedProgress.questionHistory
+          : [];
+
+        // questionHistory가 비어있으면 초기 상태로 강제 설정
+        if (questionHistory.length === 0) {
+          unlockedDifficulties.length = 0;
+          unlockedDifficulties.push("매우쉬움");
+          // 초기 상태에서는 포인트와 평균 점수도 0으로 설정
+          parsedProgress.totalPoints = 0;
+          parsedProgress.averageScore = 0;
+
+          // 초기 상태로 강제 저장
+          const initialProgress = {
+            averageScore: 0,
+            totalPoints: 0,
+            unlockedDifficulties: ["매우쉬움"],
+            completedSubjects: [],
+            questionHistory: [],
+          };
+          this.saveUserProgress(initialProgress);
+          return initialProgress;
+        }
+
         return {
           averageScore:
             typeof parsedProgress.averageScore === "number"
@@ -125,17 +157,11 @@ export class ProgressManager {
             typeof parsedProgress.totalPoints === "number"
               ? parsedProgress.totalPoints
               : 0,
-          unlockedDifficulties: Array.isArray(
-            parsedProgress.unlockedDifficulties
-          )
-            ? parsedProgress.unlockedDifficulties
-            : ["매우쉬움"],
+          unlockedDifficulties,
           completedSubjects: Array.isArray(parsedProgress.completedSubjects)
             ? parsedProgress.completedSubjects
             : [],
-          questionHistory: Array.isArray(parsedProgress.questionHistory)
-            ? parsedProgress.questionHistory
-            : [],
+          questionHistory,
         };
       } catch (error) {
         console.error("Failed to parse user progress:", error);
@@ -226,17 +252,35 @@ export class ProgressManager {
 
     // 해금된 난이도 확인
     const newUnlockedDifficulties = [...currentProgress.unlockedDifficulties];
-    const currentDifficultyIndex = DIFFICULTY_ORDER.indexOf(session.difficulty);
 
-    // 현재 난이도를 통과했고, 다음 난이도가 있다면 해금
-    if (
-      score >= DIFFICULTY_THRESHOLDS[session.difficulty] &&
-      currentDifficultyIndex < DIFFICULTY_ORDER.length - 1
-    ) {
-      const nextDifficulty = DIFFICULTY_ORDER[currentDifficultyIndex + 1];
-      if (!newUnlockedDifficulties.includes(nextDifficulty)) {
-        newUnlockedDifficulties.push(nextDifficulty);
-      }
+    // 퀴즈를 실제로 풀었을 때만 해금 조건 체크
+    if (score > 0) {
+      // 모든 난이도의 해금 조건 체크
+      DIFFICULTY_ORDER.forEach((difficulty) => {
+        if (difficulty === "매우쉬움") return; // 매우쉬움은 기본 해금
+
+        const condition =
+          DIFFICULTY_UNLOCK_CONDITIONS[
+            difficulty as keyof typeof DIFFICULTY_UNLOCK_CONDITIONS
+          ];
+        if (!condition) return;
+
+        // 해당 난이도의 통계 가져오기
+        const difficultyStats = this.getDifficultyStats();
+        const stats = difficultyStats[difficulty] || {
+          attempts: 0,
+          averageScore: 0,
+        };
+
+        // 해금 조건 만족 시 해금
+        if (
+          stats.attempts >= condition.minAttempts &&
+          stats.averageScore >= condition.minScore &&
+          !newUnlockedDifficulties.includes(difficulty)
+        ) {
+          newUnlockedDifficulties.push(difficulty);
+        }
+      });
     }
 
     // 완료된 과목 확인
