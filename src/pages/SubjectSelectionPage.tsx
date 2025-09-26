@@ -59,19 +59,6 @@ const SubjectSelectionPage: React.FC = () => {
               >
                 ← 돌아가기
               </button>
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                  <span className="text-railway-blue font-bold text-lg">
-                    {currentSubject.icon}
-                  </span>
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold">{currentSubject.name}</h1>
-                  <p className="text-sm text-blue-200">
-                    {currentSubject.description}
-                  </p>
-                </div>
-              </div>
             </div>
             <div className="text-right">
               <p className="text-sm text-blue-200">

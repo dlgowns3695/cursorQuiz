@@ -27,7 +27,7 @@ export const 철도산업발전기본법_매우쉬움: Question[] = [
     difficulty: "매우쉬움",
     question: "다음 중 철도차량이 아닌 것은?",
     options: ["객차", "화차", "열차", "동력차", "특수차"],
-    correctAnswer: 0,
+    correctAnswer: 2,
     explanation:
       "법 제 3조(정의)'철도차량'이라 함은 선로를 운행할 목적으로 제작된 동력차 객차 화차 및 특수차를 말한다.",
     points: 1,
