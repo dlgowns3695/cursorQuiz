@@ -184,12 +184,90 @@ export class ProgressManager {
     localStorage.setItem(STORAGE_KEYS.USER_PROGRESS, JSON.stringify(progress));
   }
 
+  // 중복된 퀴즈 기록 정리하기
+  static cleanDuplicateRecords(): UserProgress {
+    const progress = this.getUserProgress();
+
+    if (!progress.questionHistory || !Array.isArray(progress.questionHistory)) {
+      return progress;
+    }
+
+    console.log("=== 중복 기록 정리 시작 ===");
+    console.log("정리 전 questionHistory:", progress.questionHistory);
+
+    // 중복 제거: 같은 과목, 난이도, 점수, 시간대(5분 이내)의 기록들을 하나만 남김
+    const cleanedHistory: QuestionHistory[] = [];
+    const seen = new Set<string>();
+
+    progress.questionHistory.forEach((record) => {
+      const key = `${record.subject}_${record.difficulty}_${record.score}`;
+      const recordTime = new Date(record.completedAt).getTime();
+
+      // 같은 키가 있고, 시간이 5분 이내인 경우 중복으로 간주
+      let isDuplicate = false;
+      if (seen.has(key)) {
+        const existingRecord = cleanedHistory.find(
+          (r) =>
+            r.subject === record.subject &&
+            r.difficulty === record.difficulty &&
+            r.score === record.score
+        );
+
+        if (existingRecord) {
+          const existingTime = new Date(existingRecord.completedAt).getTime();
+          if (Math.abs(recordTime - existingTime) < 5 * 60 * 1000) {
+            isDuplicate = true;
+            console.log("중복 기록 제거:", record);
+          }
+        }
+      }
+
+      if (!isDuplicate) {
+        cleanedHistory.push(record);
+        seen.add(key);
+      }
+    });
+
+    // 통계 재계산
+    const newTotalPoints = cleanedHistory.reduce((sum, record) => {
+      const correctAnswers = Math.round((record.score / 100) * 10); // 10문제 기준
+      return sum + correctAnswers;
+    }, 0);
+
+    const allScores = cleanedHistory.map((h) => h.score);
+    const newAverageScore =
+      allScores.length > 0
+        ? Math.round(
+            allScores.reduce((sum, s) => sum + s, 0) / allScores.length
+          )
+        : 0;
+
+    const cleanedProgress: UserProgress = {
+      ...progress,
+      questionHistory: cleanedHistory,
+      totalPoints: newTotalPoints,
+      averageScore: newAverageScore,
+    };
+
+    console.log("정리 후 questionHistory:", cleanedHistory);
+    console.log("새로운 totalPoints:", newTotalPoints);
+    console.log("새로운 averageScore:", newAverageScore);
+
+    this.saveUserProgress(cleanedProgress);
+    return cleanedProgress;
+  }
+
   // 퀴즈 결과 처리 및 진도 업데이트
   static processQuizResult(
     session: QuizSession,
     userAnswers: number[],
     questions: Question[]
-  ): { newProgress: UserProgress; pointsEarned: number; score: number } {
+  ): {
+    newProgress: UserProgress;
+    pointsEarned: number;
+    score: number;
+    isDuplicate: boolean;
+  } {
     const currentProgress = this.getUserProgress();
 
     // questionHistory가 undefined이거나 배열이 아닌 경우 빈 배열로 초기화
@@ -212,6 +290,7 @@ export class ProgressManager {
         newProgress: currentProgress,
         pointsEarned: 0,
         score: existingRecord.score,
+        isDuplicate: true,
       };
     }
 
@@ -265,8 +344,8 @@ export class ProgressManager {
           ];
         if (!condition) return;
 
-        // 해당 난이도의 통계 가져오기
-        const difficultyStats = this.getDifficultyStats();
+        // 해당 과목의 난이도 통계 가져오기
+        const difficultyStats = this.getDifficultyStats(session.subject);
         const stats = difficultyStats[difficulty] || {
           attempts: 0,
           averageScore: 0,
@@ -303,6 +382,7 @@ export class ProgressManager {
       newProgress,
       pointsEarned,
       score,
+      isDuplicate: false,
     };
   }
 
@@ -325,8 +405,33 @@ export class ProgressManager {
       };
     }
 
-    const subjectHistory = progress.questionHistory.filter(
-      (h) => h.subject === subject
+    // 과목명 매핑: UI에서 사용하는 과목명을 실제 저장된 과목명으로 변환
+    const subjectMapping: { [key: string]: string[] } = {
+      "철도산업발전기본법(기본법+시행령)": [
+        "철도산업발전기본법(기본법+시행령)",
+        "철도산업발전기본법",
+        "철도산업발전기본법 시행령",
+      ],
+      "철도산업법(기본법+시행령)": [
+        "철도산업법(기본법+시행령)",
+        "철도산업법",
+        "철도산업법 시행령",
+      ],
+      "철도공사법(기본법+시행령)": [
+        "철도공사법(기본법+시행령)",
+        "철도공사법",
+        "철도공사법 시행령",
+      ],
+      "경영학-경영학원론": ["경영학-경영학원론"],
+      "경영학-인사관리": ["경영학-인사관리"],
+      "경영학-마케팅관리": ["경영학-마케팅관리"],
+    };
+
+    // 매핑된 과목명들 가져오기
+    const mappedSubjects = subjectMapping[subject] || [subject];
+
+    const subjectHistory = progress.questionHistory.filter((h) =>
+      mappedSubjects.includes(h.subject)
     );
 
     const totalQuestions = subjectHistory.length;
@@ -383,8 +488,33 @@ export class ProgressManager {
       return emptyStats;
     }
 
-    const subjectHistory = progress.questionHistory.filter(
-      (h) => h.subject === subject
+    // 과목명 매핑: UI에서 사용하는 과목명을 실제 저장된 과목명으로 변환
+    const subjectMapping: { [key: string]: string[] } = {
+      "철도산업발전기본법(기본법+시행령)": [
+        "철도산업발전기본법(기본법+시행령)",
+        "철도산업발전기본법",
+        "철도산업발전기본법 시행령",
+      ],
+      "철도산업법(기본법+시행령)": [
+        "철도산업법(기본법+시행령)",
+        "철도산업법",
+        "철도산업법 시행령",
+      ],
+      "철도공사법(기본법+시행령)": [
+        "철도공사법(기본법+시행령)",
+        "철도공사법",
+        "철도공사법 시행령",
+      ],
+      "경영학-경영학원론": ["경영학-경영학원론"],
+      "경영학-인사관리": ["경영학-인사관리"],
+      "경영학-마케팅관리": ["경영학-마케팅관리"],
+    };
+
+    // 매핑된 과목명들 가져오기
+    const mappedSubjects = subjectMapping[subject] || [subject];
+
+    const subjectHistory = progress.questionHistory.filter((h) =>
+      mappedSubjects.includes(h.subject)
     );
 
     const difficultyStats: {
@@ -428,8 +558,8 @@ export class ProgressManager {
     return difficultyStats;
   }
 
-  // 전체 난이도별 통계 가져오기
-  static getDifficultyStats(): {
+  // 특정 과목의 난이도별 통계 가져오기 (기존 getDifficultyStats 대체)
+  static getDifficultyStats(subject?: string): {
     [difficulty: string]: {
       attempts: number;
       totalScore: number;
@@ -456,13 +586,16 @@ export class ProgressManager {
       }
     );
 
-    // 전체 난이도 통계 계산 (questionHistory가 존재하는 경우에만)
+    // 특정 과목의 난이도 통계 계산 (questionHistory가 존재하는 경우에만)
     if (progress.questionHistory && Array.isArray(progress.questionHistory)) {
       progress.questionHistory.forEach((history) => {
-        const difficulty = history.difficulty;
-        if (difficultyStats[difficulty]) {
-          difficultyStats[difficulty].attempts += 1;
-          difficultyStats[difficulty].totalScore += history.score;
+        // subject가 지정된 경우 해당 과목만, 지정되지 않은 경우 전체
+        if (!subject || history.subject === subject) {
+          const difficulty = history.difficulty;
+          if (difficultyStats[difficulty]) {
+            difficultyStats[difficulty].attempts += 1;
+            difficultyStats[difficulty].totalScore += history.score;
+          }
         }
       });
     }

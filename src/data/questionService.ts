@@ -209,18 +209,18 @@ export class QuestionService {
 
       const difficultyMatch = question.difficulty === difficulty;
 
-      console.log(
-        `문제: ${question.id}, subject: ${question.subject}, difficulty: ${question.difficulty}`
-      );
-      console.log(
-        `subjectMatch: ${subjectMatch}, difficultyMatch: ${difficultyMatch}`
-      );
+      // console.log(
+      //   `문제: ${question.id}, subject: ${question.subject}, difficulty: ${question.difficulty}`
+      // );
+      // console.log(
+      //   `subjectMatch: ${subjectMatch}, difficultyMatch: ${difficultyMatch}`
+      // );
 
       return subjectMatch && difficultyMatch;
     });
 
-    console.log("필터링 결과:", filtered.length, "개");
-    console.log("=== 새로운 필터링 완료 ===");
+    // console.log("필터링 결과:", filtered.length, "개");
+    // console.log("=== 새로운 필터링 완료 ===");
 
     return filtered;
   }

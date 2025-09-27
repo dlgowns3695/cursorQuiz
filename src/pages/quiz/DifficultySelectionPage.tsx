@@ -131,6 +131,22 @@ const DifficultySelectionPage: React.FC = () => {
       }
     }
 
+    // 난이도 선택 및 통계 로그
+    const difficultyStats = ProgressManager.getSubjectDifficultyStats(
+      subject || ""
+    );
+    const stats = difficultyStats[difficulty] || {
+      attempts: 0,
+      totalScore: 0,
+      averageScore: 0,
+    };
+
+    console.log("🎮 난이도 선택:", difficulty);
+    console.log("📊 현재 통계:", {
+      풀이횟수: stats.attempts,
+      평균점수: stats.averageScore,
+    });
+
     // 문제풀이 페이지로 이동
     navigate(`/quiz/${subjectType}/${subject}/${difficulty}`);
   };
@@ -162,8 +178,10 @@ const DifficultySelectionPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {difficulties.map((difficulty, index) => {
             const isUnlocked = isDifficultyUnlocked(difficulty.name);
-            // ProgressManager에서 최신 통계 가져오기
-            const difficultyStats = ProgressManager.getDifficultyStats();
+            // ProgressManager에서 해당 과목의 난이도 통계 가져오기
+            const difficultyStats = ProgressManager.getSubjectDifficultyStats(
+              subject || ""
+            );
             const stats = difficultyStats[difficulty.name] || {
               attempts: 0,
               totalScore: 0,

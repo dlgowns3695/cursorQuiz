@@ -167,6 +167,14 @@ const QuizPage: React.FC = () => {
 
     const score = Math.round((correctCount / questions.length) * 100);
 
+    // 히스토리 ID 생성
+    const historyId = `quiz_${subject}_${difficulty}_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
+    // 제출하기 버튼 클릭 시 히스토리 ID 출력
+    console.log("🚀 제출하기 클릭 - 히스토리 ID:", historyId);
+
     // 결과 페이지로 이동
     navigate(`/quiz/${subjectType}/${subject}/${difficulty}/result`, {
       state: {
@@ -175,6 +183,8 @@ const QuizPage: React.FC = () => {
         correctAnswers: correctCount,
         userAnswers: [...userAnswers], // 배열 복사
         questions: [...questions], // 배열 복사
+        isSubmitted: true, // 제출하기 버튼을 통한 접근임을 표시
+        historyId: historyId, // 생성된 히스토리 ID 전달
       },
     });
   };

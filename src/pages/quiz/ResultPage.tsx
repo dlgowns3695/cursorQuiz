@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Question, QuizSession } from "../../data/types";
 import { ProgressManager } from "../../data/questionManager";
@@ -9,6 +9,8 @@ interface ResultData {
   correctAnswers: number;
   userAnswers: (number | null)[];
   questions: Question[];
+  isSubmitted?: boolean;
+  historyId?: string;
 }
 
 const ResultPage: React.FC = () => {
@@ -25,74 +27,71 @@ const ResultPage: React.FC = () => {
     totalPoints: 0,
     completedQuizzes: 0,
   });
-  const updateUserProgress = useCallback(
-    (data: ResultData) => {
-      // 선택한 과목명과 난이도 사용
-      const subjectName = subject || "";
-      const difficultyLevel = difficulty || "";
-
-      // 퀴즈 세션 ID 생성 (고정된 ID 사용 - 같은 결과에 대해서는 동일한 ID)
-      const quizSessionId = `quiz_${subjectName}_${difficultyLevel}_${data.score}_${data.correctAnswers}`;
-
-      // 퀴즈 세션 생성
-      const quizSession: QuizSession = {
-        id: quizSessionId,
-        subject: subjectName,
-        difficulty: difficultyLevel,
-        questions: data.questions,
-        currentQuestionIndex: data.questions.length - 1,
-        userAnswers: data.userAnswers as number[],
-        startTime: new Date().toISOString(),
-        endTime: new Date().toISOString(),
-        score: data.score,
-        isCompleted: true,
-      };
-
-      // ProgressManager를 사용하여 결과 처리 (중복 체크는 ProgressManager에서 처리)
-      const result = ProgressManager.processQuizResult(
-        quizSession,
-        data.userAnswers as number[],
-        data.questions
-      );
-
-      // 사용자 진도 업데이트
-      setUserProgress({
-        averageScore: result.newProgress.averageScore,
-        totalPoints: result.newProgress.totalPoints,
-        completedQuizzes: result.newProgress.questionHistory.length,
-      });
-
-      console.log("퀴즈 결과 처리 완료:", {
-        score: result.score,
-        pointsEarned: result.pointsEarned,
-        newProgress: result.newProgress,
-        quizSessionId: quizSessionId,
-      });
-    },
-    [subject, difficulty]
-  );
+  const [isProcessed, setIsProcessed] = useState(false);
 
   useEffect(() => {
-    console.log("ResultPage - location.state:", location.state);
-    console.log("ResultPage - location.pathname:", location.pathname);
-
-    if (location.state) {
+    if (location.state && !isProcessed) {
       const state = location.state as ResultData;
-      console.log("ResultPage - 받은 데이터:", {
-        score: state.score,
-        totalQuestions: state.totalQuestions,
-        correctAnswers: state.correctAnswers,
-        questionsLength: state.questions?.length,
-        userAnswersLength: state.userAnswers?.length,
-      });
-
       setResultData(state);
-      updateUserProgress(state);
-    } else {
-      console.log("ResultPage - 결과 데이터가 없음, 메인으로 리다이렉트");
+      setIsProcessed(true);
+
+      // 제출하기 버튼을 통한 접근인지 확인
+      if (state.isSubmitted) {
+        // 퀴즈 결과 처리 (제출하기 버튼을 통한 접근일 때만)
+        const subjectName = subject || "";
+        const difficultyLevel = difficulty || "";
+
+        // 퀴즈 세션 ID 사용 (QuizPage에서 전달받은 ID 사용)
+        const currentQuizSessionId =
+          state.historyId ||
+          `quiz_${subjectName}_${difficultyLevel}_${Date.now()}_${Math.random()
+            .toString(36)
+            .substr(2, 9)}`;
+
+        // 퀴즈 세션 생성 및 처리
+        const quizSession: QuizSession = {
+          id: currentQuizSessionId,
+          subject: subjectName,
+          difficulty: difficultyLevel,
+          questions: state.questions,
+          currentQuestionIndex: state.questions.length - 1,
+          userAnswers: state.userAnswers as number[],
+          startTime: new Date().toISOString(),
+          endTime: new Date().toISOString(),
+          score: state.score,
+          isCompleted: true,
+        };
+
+        // ProgressManager를 사용하여 결과 처리
+        const result = ProgressManager.processQuizResult(
+          quizSession,
+          state.userAnswers as number[],
+          state.questions
+        );
+
+        // 사용자 진도 업데이트
+        setUserProgress({
+          averageScore: result.newProgress.averageScore,
+          totalPoints: result.newProgress.totalPoints,
+          completedQuizzes: result.newProgress.questionHistory.length,
+        });
+
+        // 제출 완료 시 히스토리 ID 로그 (중복이 아닌 경우에만)
+        if (!result.isDuplicate) {
+          console.log("📝 제출 완료 - 히스토리 ID:", currentQuizSessionId);
+        }
+      }
+    } else if (!location.state) {
       navigate("/");
     }
-  }, [location.state, location.pathname, navigate, updateUserProgress]);
+  }, [
+    location.state,
+    location.pathname,
+    navigate,
+    subject,
+    difficulty,
+    isProcessed,
+  ]);
 
   const getGradeInfo = (score: number) => {
     if (score >= 90)

@@ -41,6 +41,8 @@ const SubjectSelectionPage: React.FC = () => {
 
   // 과목 선택 핸들러
   const handleSubjectSelect = (subject: string) => {
+    // 세부과목 선택 로그
+    console.log("📚 세부과목 선택:", subject);
     setSelectedSubject(subject);
     // 난이도 선택 페이지로 이동
     navigate(`/quiz/${subjectType}/${subject}/difficulty`);

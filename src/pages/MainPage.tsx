@@ -126,6 +126,8 @@ const MainPage: React.FC = () => {
 
   // 과목 선택 핸들러
   const handleSubjectSelect = (subject: Subject) => {
+    // 과목 선택 로그
+    console.log("🎯 과목 선택:", subject.name);
     // 세부 과목 선택 페이지로 이동
     navigate(`/quiz/${subject.type}/subjects`);
   };
