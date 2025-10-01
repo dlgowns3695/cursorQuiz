@@ -91,26 +91,39 @@ const DifficultySelectionPage: React.FC = () => {
   const checkUnlockCondition = (difficulty: string) => {
     if (difficulty === "매우쉬움") return null;
 
-    // ProgressManager를 사용하여 실제 통계 가져오기
-    const difficultyStats = ProgressManager.getDifficultyStats();
-    const stats = difficultyStats[difficulty] || {
-      attempts: 0,
-      totalScore: 0,
-      averageScore: 0,
-    };
-
     // DIFFICULTY_UNLOCK_CONDITIONS를 사용하여 해금 조건 체크
-    const { DIFFICULTY_UNLOCK_CONDITIONS } = require("../../data/constants");
+    const {
+      DIFFICULTY_UNLOCK_CONDITIONS,
+      DIFFICULTY_ORDER,
+    } = require("../../data/constants");
     const condition =
       DIFFICULTY_UNLOCK_CONDITIONS[
         difficulty as keyof typeof DIFFICULTY_UNLOCK_CONDITIONS
       ];
+
+    // 현재 난이도의 인덱스 찾기
+    const currentIndex = DIFFICULTY_ORDER.indexOf(difficulty);
+    if (currentIndex <= 0) return null; // 매우쉬움이거나 찾을 수 없는 경우
+
+    // 이전 단계 난이도 가져오기
+    const previousDifficulty = DIFFICULTY_ORDER[currentIndex - 1];
+
+    // 해당 과목의 이전 단계 난이도 통계 가져오기
+    const subjectDifficultyStats = ProgressManager.getSubjectDifficultyStats(
+      subject || ""
+    );
+    const stats = subjectDifficultyStats[previousDifficulty] || {
+      attempts: 0,
+      totalScore: 0,
+      averageScore: 0,
+    };
 
     return {
       minAttempts: condition.minAttempts,
       minAverage: condition.minScore,
       currentAttempts: stats.attempts,
       currentAverage: stats.averageScore,
+      previousDifficulty: previousDifficulty,
       isUnlocked:
         stats.attempts >= condition.minAttempts &&
         stats.averageScore >= condition.minScore,
@@ -124,7 +137,8 @@ const DifficultySelectionPage: React.FC = () => {
       if (condition) {
         alert(
           `🔒 ${difficulty} 난이도 해금 조건\n\n` +
-            `• 평균 ${condition.minAverage}점 이상 (현재: ${condition.currentAverage}점)\n\n` +
+            `• ${condition.previousDifficulty} ${condition.minAttempts}번 이상 풀이 (현재: ${condition.currentAttempts}번)\n` +
+            `• ${condition.previousDifficulty} 평균 ${condition.minAverage}점 이상 (현재: ${condition.currentAverage}점)\n\n` +
             `이전 난이도를 먼저 완주해주세요!`
         );
         return;
@@ -241,8 +255,19 @@ const DifficultySelectionPage: React.FC = () => {
                   <div className="bg-red-50 rounded-lg p-3 mb-4">
                     <div className="text-sm text-red-600">
                       <div>해금 조건:</div>
-                      <div>• {condition.minAttempts}번 이상 풀이</div>
-                      <div>• 평균 {condition.minAverage}점 이상</div>
+                      <div>
+                        • {condition.previousDifficulty} {condition.minAttempts}
+                        번 이상 풀이
+                      </div>
+                      <div>
+                        • {condition.previousDifficulty} 평균{" "}
+                        {condition.minAverage}점 이상
+                      </div>
+                      <div className="mt-2 text-xs text-gray-600">
+                        현재 {condition.previousDifficulty}:{" "}
+                        {condition.currentAttempts}번, 평균{" "}
+                        {condition.currentAverage}점
+                      </div>
                     </div>
                   </div>
                 )}
