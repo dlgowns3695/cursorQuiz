@@ -8,7 +8,7 @@ import { QUIZ_QUESTIONS_COUNT } from "../data/constants";
 interface Subject {
   id: string;
   name: string;
-  type: "management" | "railway";
+  type: "management" | "railway" | "syllogism";
   subjects: string[];
   description: string;
   icon: string;
@@ -77,6 +77,15 @@ const MainPage: React.FC = () => {
       description: "철도 관련 법령 완전 정복",
       icon: "🚂",
       color: "bg-red-500",
+    },
+    {
+      id: "syllogism",
+      name: "삼단논법 시작하기",
+      type: "syllogism",
+      subjects: ["삼단논법 기초", "전체 통합"],
+      description: "논리적 사고와 추론 능력 향상",
+      icon: "🧠",
+      color: "bg-purple-500",
     },
   ];
 
@@ -150,6 +159,8 @@ const MainPage: React.FC = () => {
         return !record.subject.includes("경영");
       } else if (selectedSubjectToReset === "railway") {
         return !record.subject.includes("철도");
+      } else if (selectedSubjectToReset === "syllogism") {
+        return !record.subject.includes("삼단논법");
       }
       return true;
     });
@@ -161,6 +172,8 @@ const MainPage: React.FC = () => {
           return record.subject.includes("경영");
         } else if (selectedSubjectToReset === "railway") {
           return record.subject.includes("철도");
+        } else if (selectedSubjectToReset === "syllogism") {
+          return record.subject.includes("삼단논법");
         }
         return false;
       })
@@ -248,6 +261,8 @@ const MainPage: React.FC = () => {
           return !subject.includes("경영");
         } else if (selectedSubjectToReset === "railway") {
           return !subject.includes("철도");
+        } else if (selectedSubjectToReset === "syllogism") {
+          return !subject.includes("삼단논법");
         }
         return true;
       }),
@@ -381,7 +396,7 @@ const MainPage: React.FC = () => {
                   <h3 className="text-lg font-semibold text-gray-700 mb-6">
                     통계를 볼 과목을 선택하세요
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
                     {/* 경영학원론 */}
                     <button
                       onClick={() => setSelectedStatsSubject("management")}
@@ -409,6 +424,20 @@ const MainPage: React.FC = () => {
                         철도법령 관련 통계 보기
                       </div>
                     </button>
+
+                    {/* 삼단논법 */}
+                    <button
+                      onClick={() => setSelectedStatsSubject("syllogism")}
+                      className="p-6 bg-white border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
+                    >
+                      <div className="text-4xl mb-3">🧠</div>
+                      <div className="font-semibold text-gray-800 text-lg mb-2">
+                        삼단논법
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        삼단논법 관련 통계 보기
+                      </div>
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -424,7 +453,9 @@ const MainPage: React.FC = () => {
                     <h3 className="text-lg font-semibold text-gray-700">
                       {selectedStatsSubject === "management"
                         ? "경영학"
-                        : "철도법령"}{" "}
+                        : selectedStatsSubject === "railway"
+                        ? "철도법령"
+                        : "삼단논법"}{" "}
                       상세 통계
                     </h3>
                   </div>
@@ -518,7 +549,7 @@ const MainPage: React.FC = () => {
                           );
                         })}
                       </div>
-                    ) : (
+                    ) : selectedStatsSubject === "railway" ? (
                       // 철도법령 통계
                       [
                         {
@@ -607,6 +638,85 @@ const MainPage: React.FC = () => {
                           </div>
                         );
                       })
+                    ) : (
+                      // 삼단논법 통계
+                      [
+                        {
+                          name: "삼단논법 기초",
+                          icon: "🧠",
+                          color: "bg-purple-100 border-purple-200",
+                          subjectName: "삼단논법 기초",
+                        },
+                        {
+                          name: "전체 통합",
+                          icon: "📚",
+                          color: "bg-indigo-100 border-indigo-200",
+                          subjectName: "전체 통합",
+                        },
+                      ].map((subject) => {
+                        const subjectDifficultyStats =
+                          ProgressManager.getSubjectDifficultyStats(
+                            subject.subjectName
+                          );
+
+                        return (
+                          <div
+                            key={subject.name}
+                            className={`rounded-lg border-2 ${subject.color} p-6`}
+                          >
+                            <div className="flex items-center mb-4">
+                              <div className="text-3xl mr-3">
+                                {subject.icon}
+                              </div>
+                              <h4 className="text-xl font-bold text-gray-800">
+                                {subject.name}
+                              </h4>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                              {[
+                                "매우쉬움",
+                                "쉬움",
+                                "보통",
+                                "어려움",
+                                "매우어려움",
+                              ].map((difficulty) => {
+                                const stats = subjectDifficultyStats[
+                                  difficulty
+                                ] || {
+                                  attempts: 0,
+                                  totalScore: 0,
+                                  averageScore: 0,
+                                };
+                                const isUnlocked =
+                                  userProgress.unlockedDifficulties.includes(
+                                    difficulty
+                                  );
+
+                                return (
+                                  <div
+                                    key={difficulty}
+                                    className={`bg-white rounded-lg p-3 text-center ${
+                                      isUnlocked
+                                        ? "border-2 border-green-300 shadow-sm"
+                                        : "border-2 border-gray-200 opacity-60"
+                                    }`}
+                                  >
+                                    <div className="text-sm font-bold text-gray-700 mb-1">
+                                      {difficulty}
+                                      {isUnlocked ? " ✓" : " 🔒"}
+                                    </div>
+                                    <div className="text-xs text-gray-600 space-y-1">
+                                      <div>풀이: {stats.attempts}번</div>
+                                      <div>평균: {stats.averageScore}점</div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -637,8 +747,10 @@ const MainPage: React.FC = () => {
                 <p className="text-red-800 text-sm">
                   <strong>주의:</strong> 이 작업은 되돌릴 수 없습니다.
                   {selectedSubjectToReset === "management"
-                    ? "경영학원론"
-                    : "철도법령"}{" "}
+                    ? "경영학"
+                    : selectedSubjectToReset === "railway"
+                    ? "철도법령"
+                    : "삼단논법"}{" "}
                   관련 모든 학습 데이터가 삭제됩니다.
                 </p>
               </div>

@@ -31,7 +31,12 @@ const DifficultySelectionPage: React.FC = () => {
     difficultyStats: {},
   });
 
-  const subjectName = subjectType === "management" ? "경영학" : "철도법령";
+  const subjectName =
+    subjectType === "management"
+      ? "경영학"
+      : subjectType === "railway"
+      ? "철도법령"
+      : "삼단논법";
 
   // 사용자 진도 로드
   useEffect(() => {

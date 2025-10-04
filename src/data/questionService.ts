@@ -11,6 +11,9 @@ import * as railwayIndustryLawRegulation from "./questions/railway/railway_indus
 import * as railwayCorporationLaw from "./questions/railway/railway_corporation_law";
 import * as railwayCorporationLawRegulation from "./questions/railway/railway_corporation_law_regulation";
 
+// 삼단논법 관련 문제들 import
+import * as syllogismBasic from "./questions/syllogism/syllogism_basic";
+
 export class QuestionService {
   private static instance: QuestionService;
   private questions: Question[] = [];
@@ -90,6 +93,20 @@ export class QuestionService {
     // 철도 문제들도 랜덤하게 섞어서 추가
     const shuffledRailwayQuestions = this.shuffleArray(railwayQuestions);
     this.questions = [...this.questions, ...shuffledRailwayQuestions];
+
+    // 삼단논법 관련 문제들을 수집
+    const syllogismQuestions = [
+      // 삼단논법 기초
+      ...syllogismBasic.삼단논법_기초_매우쉬움,
+      ...syllogismBasic.삼단논법_기초_쉬움,
+      ...syllogismBasic.삼단논법_기초_보통,
+      ...syllogismBasic.삼단논법_기초_어려움,
+      ...syllogismBasic.삼단논법_기초_매우어려움,
+    ];
+
+    // 삼단논법 문제들도 랜덤하게 섞어서 추가
+    const shuffledSyllogismQuestions = this.shuffleArray(syllogismQuestions);
+    this.questions = [...this.questions, ...shuffledSyllogismQuestions];
   }
 
   private organizeQuestionsBySubjectAndDifficulty() {
@@ -112,7 +129,7 @@ export class QuestionService {
 
   // 특정 과목과 난이도의 문제들을 가져오기
   public getQuestionsBySubjectAndDifficulty(
-    subjectType: "management" | "railway",
+    subjectType: "management" | "railway" | "syllogism",
     difficulty: string
   ): Question[] {
     console.log("=== 필터링 시작 ===");
@@ -123,7 +140,8 @@ export class QuestionService {
     const filtered = this.questions.filter((question) => {
       const subjectMatch =
         (subjectType === "management" && question.subject.includes("경영학")) ||
-        (subjectType === "railway" && question.subject.includes("철도"));
+        (subjectType === "railway" && question.subject.includes("철도")) ||
+        (subjectType === "syllogism" && question.subject.includes("삼단논법"));
       const difficultyMatch = question.difficulty === difficulty;
 
       console.log(
@@ -144,12 +162,13 @@ export class QuestionService {
 
   // 특정 과목의 모든 문제들을 가져오기
   public getQuestionsBySubject(
-    subjectType: "management" | "railway"
+    subjectType: "management" | "railway" | "syllogism"
   ): Question[] {
     return this.questions.filter(
       (question) =>
         (subjectType === "management" && question.subject.includes("경영학")) ||
-        (subjectType === "railway" && question.subject.includes("철도"))
+        (subjectType === "railway" && question.subject.includes("철도")) ||
+        (subjectType === "syllogism" && question.subject.includes("삼단논법"))
     );
   }
 
@@ -172,7 +191,7 @@ export class QuestionService {
 
   // 특정 과목과 난이도의 문제들을 가져오기 (새로운 과목명 지원)
   public getQuestionsBySubjectAndDifficultyNew(
-    subjectType: "management" | "railway",
+    subjectType: "management" | "railway" | "syllogism",
     subject: string,
     difficulty: string
   ): Question[] {
@@ -205,6 +224,12 @@ export class QuestionService {
         } else if (subject === "전체 통합") {
           subjectMatch = question.subject.includes("철도");
         }
+      } else if (subjectType === "syllogism") {
+        if (subject === "삼단논법 기초") {
+          subjectMatch = question.subject === "삼단논법 기초";
+        } else if (subject === "전체 통합") {
+          subjectMatch = question.subject.includes("삼단논법");
+        }
       }
 
       const difficultyMatch = question.difficulty === difficulty;
@@ -227,7 +252,7 @@ export class QuestionService {
 
   // 랜덤하게 문제들을 선택하기 (퀴즈용)
   public getRandomQuestions(
-    subjectType: "management" | "railway",
+    subjectType: "management" | "railway" | "syllogism",
     difficulty: string,
     count: number = 5
   ): Question[] {
@@ -248,7 +273,7 @@ export class QuestionService {
 
   // 랜덤하게 문제들을 선택하기 (새로운 과목명 지원)
   public getRandomQuestionsNew(
-    subjectType: "management" | "railway",
+    subjectType: "management" | "railway" | "syllogism",
     subject: string,
     difficulty: string,
     count: number = 5
@@ -313,6 +338,9 @@ export class QuestionService {
     const railwayQuestions = this.questions.filter((q) =>
       q.subject.includes("철도")
     ).length;
+    const syllogismQuestions = this.questions.filter((q) =>
+      q.subject.includes("삼단논법")
+    ).length;
 
     const difficultyStats = this.questions.reduce((acc, question) => {
       acc[question.difficulty] = (acc[question.difficulty] || 0) + 1;
@@ -323,6 +351,7 @@ export class QuestionService {
       totalQuestions,
       managementQuestions,
       railwayQuestions,
+      syllogismQuestions,
       difficultyStats,
     };
   }

@@ -36,7 +36,7 @@ export interface QuestionHistory {
 export interface Subject {
   id: string;
   name: string;
-  type: "management" | "railway";
+  type: "management" | "railway" | "syllogism";
   subjects: string[];
   description: string;
   icon: string;
@@ -61,4 +61,3 @@ export interface QuizSession {
   score?: number;
   isCompleted: boolean;
 }
-

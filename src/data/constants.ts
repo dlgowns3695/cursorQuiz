@@ -30,6 +30,15 @@ export const SUBJECTS: Subject[] = [
     icon: "🚂",
     color: "bg-red-500",
   },
+  {
+    id: "syllogism",
+    name: "삼단논법 시작하기",
+    type: "syllogism",
+    subjects: ["삼단논법 기초", "전체 통합"],
+    description: "논리적 사고와 추론 능력 향상",
+    icon: "🧠",
+    color: "bg-purple-500",
+  },
 ];
 
 // 난이도별 통과 점수 상수

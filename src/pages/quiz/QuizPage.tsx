@@ -29,7 +29,7 @@ const QuizPage: React.FC = () => {
       hasLoadedQuestions.current = true;
       console.log("Loading questions for:", subjectType, difficulty);
       const loadedQuestions = questionService.getRandomQuestionsNew(
-        subjectType as "management" | "railway",
+        subjectType as "management" | "railway" | "syllogism",
         subject || "",
         difficulty,
         QUIZ_QUESTIONS_COUNT
