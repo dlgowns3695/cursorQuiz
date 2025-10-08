@@ -334,7 +334,10 @@ export class ProgressManager {
 
     // 퀴즈를 실제로 풀었을 때만 해금 조건 체크
     if (score > 0) {
-      // 모든 난이도의 해금 조건 체크
+      // 해당 과목의 난이도 통계 가져오기
+      const difficultyStats = this.getDifficultyStats(session.subject);
+
+      // 순차적으로 해금 조건 체크 (이전 난이도 기준)
       DIFFICULTY_ORDER.forEach((difficulty) => {
         if (difficulty === "매우쉬움") return; // 매우쉬움은 기본 해금
 
@@ -344,17 +347,23 @@ export class ProgressManager {
           ];
         if (!condition) return;
 
-        // 해당 과목의 난이도 통계 가져오기
-        const difficultyStats = this.getDifficultyStats(session.subject);
-        const stats = difficultyStats[difficulty] || {
+        // 현재 난이도의 인덱스 찾기
+        const currentIndex = DIFFICULTY_ORDER.indexOf(difficulty);
+        if (currentIndex <= 0) return; // 매우쉬움이거나 찾을 수 없는 경우
+
+        // 이전 단계 난이도 가져오기
+        const previousDifficulty = DIFFICULTY_ORDER[currentIndex - 1];
+
+        // 이전 난이도의 통계 가져오기
+        const previousStats = difficultyStats[previousDifficulty] || {
           attempts: 0,
           averageScore: 0,
         };
 
-        // 해금 조건 만족 시 해금
+        // 해금 조건 만족 시 해금 (이전 난이도 기준)
         if (
-          stats.attempts >= condition.minAttempts &&
-          stats.averageScore >= condition.minScore &&
+          previousStats.attempts >= condition.minAttempts &&
+          previousStats.averageScore >= condition.minScore &&
           !newUnlockedDifficulties.includes(difficulty)
         ) {
           newUnlockedDifficulties.push(difficulty);

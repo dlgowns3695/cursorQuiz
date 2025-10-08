@@ -38,19 +38,78 @@ const DifficultySelectionPage: React.FC = () => {
       ? "철도법령"
       : "삼단논법";
 
-  // 사용자 진도 로드
+  // 사용자 진도 로드 및 해금 상태 업데이트
   useEffect(() => {
     const progress = ProgressManager.getUserProgress();
     const difficultyStats = ProgressManager.getDifficultyStats();
 
+    // 해금 조건을 만족하는 난이도들을 실시간으로 체크하여 해금 상태 업데이트
+    const updatedUnlockedDifficulties = [...progress.unlockedDifficulties];
+
+    // 모든 난이도에 대해 해금 조건 체크
+    const {
+      DIFFICULTY_UNLOCK_CONDITIONS,
+      DIFFICULTY_ORDER,
+    } = require("../../data/constants");
+    const subjectDifficultyStats = ProgressManager.getSubjectDifficultyStats(
+      subject || ""
+    );
+
+    DIFFICULTY_ORDER.forEach((difficulty: string) => {
+      if (difficulty === "매우쉬움") return; // 매우쉬움은 기본 해금
+
+      const condition =
+        DIFFICULTY_UNLOCK_CONDITIONS[
+          difficulty as keyof typeof DIFFICULTY_UNLOCK_CONDITIONS
+        ];
+      if (!condition) return;
+
+      // 현재 난이도의 인덱스 찾기
+      const currentIndex = DIFFICULTY_ORDER.indexOf(difficulty);
+      if (currentIndex <= 0) return;
+
+      // 이전 단계 난이도 가져오기
+      const previousDifficulty = DIFFICULTY_ORDER[currentIndex - 1];
+
+      // 이전 난이도의 통계 가져오기
+      const previousStats = subjectDifficultyStats[previousDifficulty] || {
+        attempts: 0,
+        averageScore: 0,
+      };
+
+      // 해금 조건 만족 시 해금 (이전 난이도 기준)
+      if (
+        previousStats.attempts >= condition.minAttempts &&
+        previousStats.averageScore >= condition.minScore &&
+        !updatedUnlockedDifficulties.includes(difficulty)
+      ) {
+        updatedUnlockedDifficulties.push(difficulty);
+      }
+    });
+
+    // 해금 상태가 변경된 경우 localStorage에 저장
+    if (
+      updatedUnlockedDifficulties.length !==
+        progress.unlockedDifficulties.length ||
+      !updatedUnlockedDifficulties.every(
+        (diff, index) => diff === progress.unlockedDifficulties[index]
+      )
+    ) {
+      const updatedProgress = {
+        ...progress,
+        unlockedDifficulties: updatedUnlockedDifficulties,
+      };
+      ProgressManager.saveUserProgress(updatedProgress);
+    }
+
     setUserProgress({
       averageScore: progress.averageScore,
       totalPoints: progress.totalPoints,
-      unlockedDifficulties: progress.unlockedDifficulties,
+      unlockedDifficulties: updatedUnlockedDifficulties,
       completedSubjects: progress.completedSubjects,
       difficultyStats: difficultyStats,
     });
-  }, []);
+  }, [subject]);
 
   // subjectType이 없으면 메인으로 리다이렉트
   if (!subjectType) {

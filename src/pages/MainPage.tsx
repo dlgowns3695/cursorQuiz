@@ -112,7 +112,7 @@ const MainPage: React.FC = () => {
     [difficultyUnlockConditions]
   );
 
-  // 컴포넌트 마운트 시 로컬 스토리지에서 사용자 진도 로드
+  // 컴포넌트 마운트 시 로컬 스토리지에서 사용자 진도 로드 및 해금 상태 업데이트
   useEffect(() => {
     const progress = ProgressManager.getUserProgress();
 
@@ -120,15 +120,92 @@ const MainPage: React.FC = () => {
     const isInitialState =
       !progress.questionHistory || progress.questionHistory.length === 0;
 
+    let updatedUnlockedDifficulties = isInitialState
+      ? ["매우쉬움"]
+      : [...progress.unlockedDifficulties];
+
+    // 해금 조건을 만족하는 난이도들을 실시간으로 체크하여 해금 상태 업데이트
+    if (!isInitialState) {
+      const {
+        DIFFICULTY_UNLOCK_CONDITIONS,
+        DIFFICULTY_ORDER,
+      } = require("../data/constants");
+
+      // 모든 과목에 대해 해금 조건 체크
+      const allSubjects = [
+        "경영학이론",
+        "마케팅관리",
+        "인사관리",
+        "철도기본법",
+        "철도기본법시행령",
+        "철도사업법",
+        "철도사업법시행령",
+        "철도산업발전기본법",
+        "철도산업발전기본법시행령",
+        "삼단논법",
+      ];
+
+      allSubjects.forEach((subject) => {
+        const subjectDifficultyStats =
+          ProgressManager.getSubjectDifficultyStats(subject);
+
+        DIFFICULTY_ORDER.forEach((difficulty: string) => {
+          if (difficulty === "매우쉬움") return; // 매우쉬움은 기본 해금
+
+          const condition =
+            DIFFICULTY_UNLOCK_CONDITIONS[
+              difficulty as keyof typeof DIFFICULTY_UNLOCK_CONDITIONS
+            ];
+          if (!condition) return;
+
+          // 현재 난이도의 인덱스 찾기
+          const currentIndex = DIFFICULTY_ORDER.indexOf(difficulty);
+          if (currentIndex <= 0) return;
+
+          // 이전 단계 난이도 가져오기
+          const previousDifficulty = DIFFICULTY_ORDER[currentIndex - 1];
+
+          // 이전 난이도의 통계 가져오기
+          const previousStats = subjectDifficultyStats[previousDifficulty] || {
+            attempts: 0,
+            averageScore: 0,
+          };
+
+          // 해금 조건 만족 시 해금 (이전 난이도 기준)
+          if (
+            previousStats.attempts >= condition.minAttempts &&
+            previousStats.averageScore >= condition.minScore &&
+            !updatedUnlockedDifficulties.includes(difficulty)
+          ) {
+            updatedUnlockedDifficulties.push(difficulty);
+          }
+        });
+      });
+    }
+
     const newProgress = {
       averageScore: isInitialState ? 0 : progress.averageScore,
       totalPoints: isInitialState ? 0 : progress.totalPoints,
-      unlockedDifficulties: isInitialState
-        ? ["매우쉬움"]
-        : progress.unlockedDifficulties,
+      unlockedDifficulties: updatedUnlockedDifficulties,
       completedSubjects: isInitialState ? [] : progress.completedSubjects,
       questionHistory: isInitialState ? [] : progress.questionHistory,
     };
+
+    // 해금 상태가 변경된 경우 localStorage에 저장
+    if (
+      !isInitialState &&
+      (updatedUnlockedDifficulties.length !==
+        progress.unlockedDifficulties.length ||
+        !updatedUnlockedDifficulties.every(
+          (diff, index) => diff === progress.unlockedDifficulties[index]
+        ))
+    ) {
+      const updatedProgress = {
+        ...progress,
+        unlockedDifficulties: updatedUnlockedDifficulties,
+      };
+      ProgressManager.saveUserProgress(updatedProgress);
+    }
 
     setUserProgress(newProgress);
   }, []);
@@ -234,19 +311,37 @@ const MainPage: React.FC = () => {
         stats.attempts > 0 ? Math.round(stats.totalScore / stats.attempts) : 0;
     });
 
-    // 해금 조건 체크
-    const { DIFFICULTY_UNLOCK_CONDITIONS } = require("../data/constants");
-    Object.keys(difficultyStats).forEach((difficulty) => {
+    // 해금 조건 체크 (이전 난이도 기준)
+    const {
+      DIFFICULTY_UNLOCK_CONDITIONS,
+      DIFFICULTY_ORDER,
+    } = require("../data/constants");
+    DIFFICULTY_ORDER.forEach((difficulty: string) => {
       if (difficulty === "매우쉬움") return;
 
       const condition =
         DIFFICULTY_UNLOCK_CONDITIONS[
           difficulty as keyof typeof DIFFICULTY_UNLOCK_CONDITIONS
         ];
+      if (!condition) return;
+
+      // 현재 난이도의 인덱스 찾기
+      const currentIndex = DIFFICULTY_ORDER.indexOf(difficulty);
+      if (currentIndex <= 0) return; // 매우쉬움이거나 찾을 수 없는 경우
+
+      // 이전 단계 난이도 가져오기
+      const previousDifficulty = DIFFICULTY_ORDER[currentIndex - 1];
+
+      // 이전 난이도의 통계 가져오기
+      const previousStats = difficultyStats[previousDifficulty] || {
+        attempts: 0,
+        averageScore: 0,
+      };
+
+      // 해금 조건 만족 시 해금 (이전 난이도 기준)
       if (
-        condition &&
-        difficultyStats[difficulty].attempts >= condition.minAttempts &&
-        difficultyStats[difficulty].averageScore >= condition.minScore
+        previousStats.attempts >= condition.minAttempts &&
+        previousStats.averageScore >= condition.minScore
       ) {
         remainingDifficulties.add(difficulty);
       }
