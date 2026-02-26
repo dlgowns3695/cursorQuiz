@@ -7,7 +7,6 @@ const SubjectSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const { subjectType } = useParams<{ subjectType: string }>();
   const [userProgress] = useState(ProgressManager.getUserProgress());
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
 
   // 해당 타입의 과목 정보 가져오기
   const currentSubject = SUBJECTS.find((s) => s.type === subjectType);
@@ -34,18 +33,10 @@ const SubjectSelectionPage: React.FC = () => {
     return ProgressManager.getSubjectProgress(subject);
   };
 
-  // 세부 과목별 난이도 통계 가져오기
-  const getSubjectDifficultyStats = (subject: string) => {
-    return ProgressManager.getSubjectDifficultyStats(subject);
-  };
-
-  // 과목 선택 핸들러
+  // 과목 선택 핸들러 - 선택한 과목으로 퀴즈 바로 시작 (난이도 선택 없음)
   const handleSubjectSelect = (subject: string) => {
-    // 세부과목 선택 로그
-    console.log("📚 세부과목 선택:", subject);
-    setSelectedSubject(subject);
-    // 난이도 선택 페이지로 이동
-    navigate(`/quiz/${subjectType}/${subject}/difficulty`);
+    console.log("📚 세부과목 선택 → 퀴즈 시작:", subject);
+    navigate(`/quiz/${subjectType}/${encodeURIComponent(subject)}`);
   };
 
   return (
@@ -79,9 +70,8 @@ const SubjectSelectionPage: React.FC = () => {
             학습할 과목을 선택하세요
           </h2>
           <p className="text-blue-700 text-sm">
-            각 과목을 개별적으로 학습하거나, 마지막에 전체 통합 문제를
-            풀어보세요. 난이도는 점진적으로 해금되며, 각 문제를 맞힐 때마다
-            1포인트를 획득합니다.
+            과목을 선택하면 해당 과목의 문제풀이가 바로 시작됩니다. 각 문제를
+            맞힐 때마다 1포인트를 획득합니다.
           </p>
         </div>
 
@@ -95,11 +85,7 @@ const SubjectSelectionPage: React.FC = () => {
             return (
               <div
                 key={subject}
-                className={`bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer border-2 ${
-                  selectedSubject === subject
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200"
-                }`}
+                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer border-2 border-gray-200"
                 onClick={() => handleSubjectSelect(subject)}
               >
                 <div className="flex items-start justify-between">
@@ -134,15 +120,9 @@ const SubjectSelectionPage: React.FC = () => {
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">풀이한 문제:</span>
+                          <span className="text-gray-600">풀이한 횟수:</span>
                           <span className="font-semibold">
                             {progress.totalQuestions}회
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">해금된 난이도:</span>
-                          <span className="font-semibold text-blue-600">
-                            {progress.completedDifficulties.length}개
                           </span>
                         </div>
                       </div>
@@ -161,90 +141,12 @@ const SubjectSelectionPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* 선택 표시 */}
-                  {selectedSubject === subject && (
-                    <div className="text-blue-500 text-2xl">✓</div>
-                  )}
+                  {/* 선택 표시 제거: 카드 클릭 시 바로 퀴즈로 이동 */}
                 </div>
               </div>
             );
           })}
         </div>
-
-        {/* 선택된 과목에 대한 액션 버튼 */}
-        {selectedSubject && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              {selectedSubject} 학습 시작
-            </h3>
-            <div className="flex flex-wrap gap-3">
-              <button
-                className="px-6 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
-                onClick={() => {
-                  // TODO: 퀴즈 페이지로 이동
-                  console.log(`${selectedSubject} 퀴즈 시작`);
-                }}
-              >
-                퀴즈 시작하기
-              </button>
-              <button
-                className="px-6 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors"
-                onClick={() => {
-                  // TODO: 문제 관리 페이지로 이동
-                  console.log(`${selectedSubject} 문제 관리`);
-                }}
-              >
-                문제 관리
-              </button>
-              <button
-                className="px-6 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors"
-                onClick={() => {
-                  // TODO: 진도 확인 페이지로 이동
-                  console.log(`${selectedSubject} 진도 확인`);
-                }}
-              >
-                진도 확인
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 선택된 과목의 난이도별 통계 */}
-        {selectedSubject && (
-          <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              {selectedSubject} 난이도별 통계
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {["매우쉬움", "쉬움", "보통", "어려움", "매우어려움"].map(
-                (difficulty) => {
-                  const difficultyStats =
-                    getSubjectDifficultyStats(selectedSubject);
-                  const stats = difficultyStats[difficulty] || {
-                    attempts: 0,
-                    totalScore: 0,
-                    averageScore: 0,
-                  };
-
-                  return (
-                    <div
-                      key={difficulty}
-                      className="bg-gray-50 rounded-lg p-4 text-center border-2 border-gray-200"
-                    >
-                      <div className="text-lg font-bold text-gray-800 mb-2">
-                        {difficulty}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <div>풀이: {stats.attempts}번</div>
-                        <div>평균: {stats.averageScore}점</div>
-                      </div>
-                    </div>
-                  );
-                }
-              )}
-            </div>
-          </div>
-        )}
 
         {/* 학습 팁 */}
         <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
@@ -253,11 +155,7 @@ const SubjectSelectionPage: React.FC = () => {
           </h3>
           <ul className="text-yellow-700 space-y-1 text-sm">
             <li>• 각 과목을 순서대로 학습하는 것을 권장합니다</li>
-            <li>
-              • 난이도는 점진적으로 해금되므로 기본부터 차근차근 학습하세요
-            </li>
-            <li>• 문제를 직접 입력하여 나만의 문제집을 만들어보세요</li>
-            <li>• 전체 통합 문제는 모든 세부 과목을 학습한 후 도전하세요</li>
+            <li>• 전체 통합은 모든 세부 과목이 포함된 문제입니다</li>
           </ul>
         </div>
       </main>

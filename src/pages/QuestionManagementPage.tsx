@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Question } from "../data/types";
 import { QuestionManager } from "../data/questionManager";
-import { DIFFICULTY_ORDER } from "../data/constants";
 
 interface QuestionManagementPageProps {
   subject: string;
@@ -12,6 +11,15 @@ const QuestionManagementPage: React.FC<QuestionManagementPageProps> = ({
   subject,
   onBack,
 }) => {
+  // 난이도 선택에 사용할 고정 목록 (전역 난이도 순서/해금 기능 제거 후, 관리 페이지에서만 사용)
+  const DIFFICULTIES = [
+    "매우쉬움",
+    "쉬움",
+    "보통",
+    "어려움",
+    "매우어려움",
+  ] as const;
+
   const [questions, setQuestions] = useState<Question[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
@@ -76,14 +84,15 @@ const QuestionManagementPage: React.FC<QuestionManagementPageProps> = ({
       options: [...question.options],
       correctAnswer: question.correctAnswer,
       explanation: question.explanation,
-      difficulty: question.difficulty,
+      // 기존 문제에 difficulty가 없을 수도 있으므로 기본값 지정
+      difficulty: question.difficulty ?? "매우쉬움",
     });
     setShowAddForm(true);
   };
 
   // 문제 업데이트
   const handleUpdateQuestion = () => {
-    if (!editingQuestion) return;
+    if (!editingQuestion || !editingQuestion.id) return;
 
     const updatedQuestion = {
       ...editingQuestion,
@@ -102,7 +111,8 @@ const QuestionManagementPage: React.FC<QuestionManagementPageProps> = ({
   };
 
   // 문제 삭제
-  const handleDeleteQuestion = (id: string) => {
+  const handleDeleteQuestion = (id?: string) => {
+    if (!id) return;
     if (window.confirm("정말로 이 문제를 삭제하시겠습니까?")) {
       QuestionManager.deleteQuestion(id);
       loadQuestions();
@@ -168,19 +178,6 @@ const QuestionManagementPage: React.FC<QuestionManagementPageProps> = ({
               </div>
               <div className="text-sm text-gray-600">총 문제 수</div>
             </div>
-            {DIFFICULTY_ORDER.map((difficulty) => {
-              const count = questions.filter(
-                (q) => q.difficulty === difficulty
-              ).length;
-              return (
-                <div key={difficulty} className="text-center">
-                  <div className="text-2xl font-bold text-gray-600">
-                    {count}
-                  </div>
-                  <div className="text-sm text-gray-600">{difficulty}</div>
-                </div>
-              );
-            })}
           </div>
         </div>
 
@@ -189,7 +186,7 @@ const QuestionManagementPage: React.FC<QuestionManagementPageProps> = ({
           <div className="flex flex-wrap gap-4 items-center">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                난이도 필터
+                난이도 필터 (선택 사항)
               </label>
               <select
                 value={filterDifficulty}
@@ -197,7 +194,7 @@ const QuestionManagementPage: React.FC<QuestionManagementPageProps> = ({
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="전체">전체</option>
-                {DIFFICULTY_ORDER.map((difficulty) => (
+                {DIFFICULTIES.map((difficulty) => (
                   <option key={difficulty} value={difficulty}>
                     {difficulty}
                   </option>
@@ -241,7 +238,11 @@ const QuestionManagementPage: React.FC<QuestionManagementPageProps> = ({
                         {question.difficulty}
                       </span>
                       <span className="text-sm text-gray-500">
-                        {new Date(question.createdAt).toLocaleDateString()}
+                        {question.createdAt
+                          ? new Date(
+                              question.createdAt
+                            ).toLocaleDateString()
+                          : ""}
                       </span>
                     </div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-3">
@@ -319,7 +320,7 @@ const QuestionManagementPage: React.FC<QuestionManagementPageProps> = ({
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      {DIFFICULTY_ORDER.map((difficulty) => (
+                      {DIFFICULTIES.map((difficulty) => (
                         <option key={difficulty} value={difficulty}>
                           {difficulty}
                         </option>
