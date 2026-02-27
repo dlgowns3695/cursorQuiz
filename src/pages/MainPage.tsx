@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ProgressManager } from "../data/questionManager";
-import { UserProgress } from "../data/types";
-import { QUIZ_QUESTIONS_COUNT } from "../data/constants";
+import { UserProgress, QuestionHistory, QuizSession } from "../data/types";
 
 // 과목 정보 인터페이스
 interface Subject {
@@ -21,7 +20,6 @@ const MainPage: React.FC = () => {
   // 사용자 진도 상태 관리
   const [userProgress, setUserProgress] = useState<UserProgress>({
     averageScore: 0,
-    totalPoints: 0,
     completedSubjects: [],
     questionHistory: [],
   });
@@ -38,6 +36,14 @@ const MainPage: React.FC = () => {
     string | null
   >(null);
 
+  // 응시 기록 모달 상태
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [selectedHistory, setSelectedHistory] =
+    useState<QuestionHistory | null>(null);
+  const [selectedSession, setSelectedSession] = useState<QuizSession | null>(
+    null,
+  );
+
   // 과목 정보 정의
   const subjects: Subject[] = [
     {
@@ -45,12 +51,7 @@ const MainPage: React.FC = () => {
       name: "철도법령 시작하기",
       type: "railway",
       // 대표 과목/통합 과목 목록 (실제 문제 선택은 세부 과목 페이지에서 처리)
-      subjects: [
-        "철도산업발전기본법",
-        "철도산업법",
-        "철도공사법",
-        "전체 통합",
-      ],
+      subjects: ["철도산업발전기본법", "철도산업법", "철도공사법", "전체 통합"],
       description: "철도 관련 법령 완전 정복",
       icon: "🚂",
       color: "bg-red-500",
@@ -64,7 +65,6 @@ const MainPage: React.FC = () => {
     const progress = ProgressManager.getUserProgress();
     setUserProgress({
       averageScore: progress.averageScore,
-      totalPoints: progress.totalPoints,
       completedSubjects: progress.completedSubjects || [],
       questionHistory: progress.questionHistory || [],
     });
@@ -88,68 +88,11 @@ const MainPage: React.FC = () => {
   const handleResetConfirm = () => {
     if (!selectedSubjectToReset) return;
 
-    const currentProgress = ProgressManager.getUserProgress();
-
-    // 선택된 과목의 데이터만 제거
-    const filteredHistory = currentProgress.questionHistory.filter((record) => {
-      if (selectedSubjectToReset === "railway") {
-        return !record.subject.includes("철도");
-      }
-      return true;
-    });
-
-    // 해당 과목으로 얻은 포인트 계산
-    const removedPoints = currentProgress.questionHistory
-      .filter((record) => {
-        if (selectedSubjectToReset === "railway") {
-          return record.subject.includes("철도");
-        }
-        return false;
-      })
-      .reduce((sum, record) => {
-        // 퀴즈 세션별로 획득한 포인트 계산
-        // score는 0-100 사이의 점수이므로, 이를 맞힌 문제 수로 변환
-        const correctAnswers = Math.round(
-          (record.score / 100) * QUIZ_QUESTIONS_COUNT,
-        );
-        return sum + correctAnswers;
-      }, 0);
-
-    // 새로운 진도 계산
-    const newTotalPoints = Math.max(
-      0,
-      currentProgress.totalPoints - removedPoints,
-    );
-    const allScores = filteredHistory.map((h) => h.score);
-    const newAverageScore =
-      allScores.length > 0
-        ? Math.round(
-            allScores.reduce((sum, s) => sum + s, 0) / allScores.length,
-          )
-        : 0;
-
-    // 해금된 난이도 재계산 제거 (난이도 미사용)
-    const newProgress: UserProgress = {
-      averageScore: newAverageScore,
-      totalPoints: newTotalPoints,
-      completedSubjects: currentProgress.completedSubjects.filter((subject) => {
-        if (selectedSubjectToReset === "railway") {
-          return !subject.includes("철도");
-        }
-        return true;
-      }),
-      questionHistory: filteredHistory,
-    };
-
-    ProgressManager.saveUserProgress(newProgress);
-
-    // UI 업데이트
-    setUserProgress({
-      averageScore: newProgress.averageScore,
-      totalPoints: newProgress.totalPoints,
-      completedSubjects: newProgress.completedSubjects,
-      questionHistory: newProgress.questionHistory,
-    });
+    if (selectedSubjectToReset === "railway") {
+      // 철도법령 관련 모든 학습 데이터 초기화
+      const newProgress = ProgressManager.resetAllProgress();
+      setUserProgress(newProgress);
+    }
 
     setShowResetModal(false);
     setSelectedSubjectToReset(null);
@@ -159,6 +102,34 @@ const MainPage: React.FC = () => {
   const handleResetCancel = () => {
     setShowResetModal(false);
     setSelectedSubjectToReset(null);
+  };
+
+  // 응시 기록 모달 열기
+  const handleHistoryOpen = () => {
+    if (!userProgress.questionHistory.length) return;
+    // 가장 최근 기록을 기본 선택
+    const sorted = [...userProgress.questionHistory].sort(
+      (a, b) =>
+        new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
+    );
+    const latest = sorted[0];
+    const session = ProgressManager.getQuizSessionById(latest.questionId);
+    setSelectedHistory(latest);
+    setSelectedSession(session || null);
+    setShowHistoryModal(true);
+  };
+
+  // 응시 기록 리스트에서 항목 선택
+  const handleHistoryItemClick = (record: QuestionHistory) => {
+    const session = ProgressManager.getQuizSessionById(record.questionId);
+    setSelectedHistory(record);
+    setSelectedSession(session || null);
+  };
+
+  const closeHistoryModal = () => {
+    setShowHistoryModal(false);
+    setSelectedHistory(null);
+    setSelectedSession(null);
   };
 
   return (
@@ -175,13 +146,24 @@ const MainPage: React.FC = () => {
           </p>
         </div>
 
-        {/* 통계 버튼 */}
-        <div className="mb-12 text-center">
+        {/* 통계 / 응시 기록 버튼 */}
+        <div className="mb-12 flex items-center justify-center gap-4">
           <button
             onClick={() => setShowStatsModal(true)}
-            className="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors shadow-lg"
+            className="px-4 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors shadow-lg text-sm"
           >
-            📊 상세 통계 보기
+            상세 통계 보기
+          </button>
+          <button
+            onClick={handleHistoryOpen}
+            disabled={userProgress.questionHistory.length === 0}
+            className={`px-4 py-3 rounded-lg font-semibold shadow-lg transition-colors text-sm ${
+              userProgress.questionHistory.length === 0
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-indigo-500 text-white hover:bg-indigo-600"
+            }`}
+          >
+            응시 기록 보기
           </button>
         </div>
 
@@ -231,13 +213,6 @@ const MainPage: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
-
-        {/* 하단 정보 */}
-        <div className="text-center mt-12">
-          <p className="text-gray-500 text-sm">
-            포인트: {userProgress.totalPoints}
-          </p>
         </div>
       </main>
 
@@ -360,6 +335,211 @@ const MainPage: React.FC = () => {
         </div>
       )}
 
+      {/* 응시 기록 모달 */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-800">응시 기록</h2>
+                <button
+                  onClick={closeHistoryModal}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              {userProgress.questionHistory.length === 0 ? (
+                <p className="text-sm text-gray-600">
+                  아직 응시 기록이 없습니다.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* 응시 기록 리스트 */}
+                  <div className="md:col-span-1 border-r border-gray-200 pr-0 md:pr-4">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                      최근 응시 목록
+                    </h3>
+                    <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                      {userProgress.questionHistory
+                        .slice()
+                        .sort(
+                          (a, b) =>
+                            new Date(b.completedAt).getTime() -
+                            new Date(a.completedAt).getTime(),
+                        )
+                        .map((record) => (
+                          <button
+                            key={record.questionId}
+                            onClick={() => handleHistoryItemClick(record)}
+                            className={`w-full text-left px-3 py-2 rounded border text-xs ${
+                              selectedHistory &&
+                              selectedHistory.questionId === record.questionId
+                                ? "border-blue-500 bg-blue-50"
+                                : "border-gray-200 bg-white hover:border-blue-400"
+                            }`}
+                          >
+                            <div className="font-semibold text-gray-800 truncate">
+                              {record.subject}
+                            </div>
+                            <div className="text-[11px] text-gray-500">
+                              {new Date(record.completedAt).toLocaleString(
+                                undefined,
+                                {
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </div>
+                            <div className="mt-0.5">
+                              <span
+                                className={
+                                  record.isCorrect
+                                    ? "font-bold text-green-600"
+                                    : "font-bold text-red-600"
+                                }
+                              >
+                                {record.score}점
+                              </span>
+                              <span className="ml-1 text-[10px] text-gray-500">
+                                {record.isCorrect ? "통과" : "재도전 필요"}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* 선택된 기록 상세 */}
+                  <div className="md:col-span-2">
+                    {selectedHistory && selectedSession ? (
+                      <div className="space-y-4">
+                        {/* 요약 정보 */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-gray-800 mb-1">
+                                {selectedSession.subject}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                응시일시:{" "}
+                                {new Date(
+                                  selectedHistory.completedAt,
+                                ).toLocaleString(undefined, {
+                                  year: "numeric",
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </div>
+                            </div>
+                            <div className="text-right text-sm">
+                              <span
+                                className={
+                                  selectedHistory.isCorrect
+                                    ? "font-bold text-green-600"
+                                    : "font-bold text-red-600"
+                                }
+                              >
+                                {selectedHistory.score}점
+                              </span>
+                              <span className="ml-2 text-xs text-gray-500">
+                                {selectedHistory.isCorrect
+                                  ? "통과"
+                                  : "재도전 필요"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 문항별 정답/오답 상세 */}
+                        <div className="space-y-4">
+                          {selectedSession.questions.map((question, index) => {
+                            const userAnswer =
+                              selectedSession.userAnswers[index];
+                            const isCorrect =
+                              userAnswer === question.correctAnswer;
+                            return (
+                              <div
+                                key={index}
+                                className={`border rounded-lg p-4 ${
+                                  isCorrect
+                                    ? "border-green-200 bg-green-50"
+                                    : "border-red-200 bg-red-50"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="text-xs font-semibold text-gray-700">
+                                    문항 #{index + 1}
+                                  </div>
+                                  <div
+                                    className={`text-xs font-semibold ${
+                                      isCorrect
+                                        ? "text-green-700"
+                                        : "text-red-700"
+                                    }`}
+                                  >
+                                    {isCorrect ? "정답" : "오답"}
+                                  </div>
+                                </div>
+                                <div className="text-sm font-medium text-gray-800 mb-3 whitespace-pre-line">
+                                  {question.question}
+                                </div>
+                                <div className="space-y-1">
+                                  {question.options.map((opt, optIdx) => {
+                                    const isOptCorrect =
+                                      optIdx === question.correctAnswer;
+                                    const isOptUser = optIdx === userAnswer;
+                                    let className =
+                                      "px-3 py-1.5 rounded text-sm border bg-white";
+                                    if (isOptCorrect) {
+                                      className =
+                                        "px-3 py-1.5 rounded text-sm border border-green-400 bg-green-50 text-green-800";
+                                    } else if (isOptUser && !isOptCorrect) {
+                                      className =
+                                        "px-3 py-1.5 rounded text-sm border border-red-400 bg-red-100 text-red-800";
+                                    }
+                                    return (
+                                      <div key={optIdx} className={className}>
+                                        <span className="font-semibold mr-1">
+                                          {String.fromCharCode(65 + optIdx)}.
+                                        </span>
+                                        {opt}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {question.explanation && (
+                                  <div className="mt-3 text-xs text-gray-700 bg-white border border-gray-200 rounded p-2">
+                                    <span className="font-semibold text-gray-800">
+                                      해설:
+                                    </span>{" "}
+                                    {question.explanation}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-600">
+                        왼쪽 목록에서 응시 기록을 선택하면 상세 내용을 확인할 수
+                        있습니다.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 초기화 확인 모달 */}
       {showResetModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -372,7 +552,7 @@ const MainPage: React.FC = () => {
                   데이터 초기화
                 </h2>
                 <p className="text-gray-600">
-                  모든 데이터 및 해당과목으로 얻은 포인트는 없어집니다
+                  철도법령 관련 모든 학습 데이터가 삭제됩니다.
                 </p>
               </div>
 

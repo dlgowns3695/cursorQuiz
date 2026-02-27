@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { SUBJECTS } from "../data/constants";
 import { ProgressManager } from "../data/questionManager";
@@ -6,7 +6,6 @@ import { ProgressManager } from "../data/questionManager";
 const SubjectSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const { subjectType } = useParams<{ subjectType: string }>();
-  const [userProgress] = useState(ProgressManager.getUserProgress());
 
   // 해당 타입의 과목 정보 가져오기
   const currentSubject = SUBJECTS.find((s) => s.type === subjectType);
@@ -53,11 +52,6 @@ const SubjectSelectionPage: React.FC = () => {
                 ← 돌아가기
               </button>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-blue-200">
-                포인트: {userProgress.totalPoints}
-              </p>
-            </div>
           </div>
         </div>
       </header>
@@ -70,8 +64,7 @@ const SubjectSelectionPage: React.FC = () => {
             학습할 과목을 선택하세요
           </h2>
           <p className="text-blue-700 text-sm">
-            과목을 선택하면 해당 과목의 문제풀이가 바로 시작됩니다. 각 문제를
-            맞힐 때마다 1포인트를 획득합니다.
+            과목을 선택하면 해당 과목의 문제풀이가 바로 시작됩니다.
           </p>
         </div>
 

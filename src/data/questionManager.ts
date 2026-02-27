@@ -112,7 +112,6 @@ export class ProgressManager {
       try {
         const parsedProgress = JSON.parse(progress);
 
-        // 초기 상태에서 잘못된 해금 상태 방지
         const questionHistory = Array.isArray(parsedProgress.questionHistory)
           ? parsedProgress.questionHistory
           : [];
@@ -121,10 +120,6 @@ export class ProgressManager {
           averageScore:
             typeof parsedProgress.averageScore === "number"
               ? parsedProgress.averageScore
-              : 0,
-          totalPoints:
-            typeof parsedProgress.totalPoints === "number"
-              ? parsedProgress.totalPoints
               : 0,
           completedSubjects: Array.isArray(parsedProgress.completedSubjects)
             ? parsedProgress.completedSubjects
@@ -140,7 +135,6 @@ export class ProgressManager {
     // 기본값 반환
     return {
       averageScore: 0,
-      totalPoints: 0,
       completedSubjects: [],
       questionHistory: [],
     };
@@ -195,12 +189,6 @@ export class ProgressManager {
       }
     });
 
-    // 통계 재계산
-    const newTotalPoints = cleanedHistory.reduce((sum, record) => {
-      const correctAnswers = Math.round((record.score / 100) * 10); // 10문제 기준
-      return sum + correctAnswers;
-    }, 0);
-
     const allScores = cleanedHistory.map((h) => h.score);
     const newAverageScore =
       allScores.length > 0
@@ -212,12 +200,10 @@ export class ProgressManager {
     const cleanedProgress: UserProgress = {
       ...progress,
       questionHistory: cleanedHistory,
-      totalPoints: newTotalPoints,
       averageScore: newAverageScore,
     };
 
     console.log("정리 후 questionHistory:", cleanedHistory);
-    console.log("새로운 totalPoints:", newTotalPoints);
     console.log("새로운 averageScore:", newAverageScore);
 
     this.saveUserProgress(cleanedProgress);
@@ -229,12 +215,7 @@ export class ProgressManager {
     session: QuizSession,
     userAnswers: number[],
     questions: Question[]
-  ): {
-    newProgress: UserProgress;
-    pointsEarned: number;
-    score: number;
-    isDuplicate: boolean;
-  } {
+  ): { newProgress: UserProgress; score: number; isDuplicate: boolean } {
     const currentProgress = this.getUserProgress();
 
     // questionHistory가 undefined이거나 배열이 아닌 경우 빈 배열로 초기화
@@ -255,7 +236,6 @@ export class ProgressManager {
       // 기존 데이터 반환
       return {
         newProgress: currentProgress,
-        pointsEarned: 0,
         score: existingRecord.score,
         isDuplicate: true,
       };
@@ -270,7 +250,6 @@ export class ProgressManager {
     });
 
     const score = Math.round((correctAnswers / questions.length) * 100);
-    const pointsEarned = correctAnswers; // 맞힌 문제 수만큼 포인트 획득
 
     // 퀴즈 세션을 하나의 단위로 기록
     const quizRecord: QuestionHistory = {
@@ -286,7 +265,6 @@ export class ProgressManager {
 
     // 새로운 진도 계산
     const newQuestionHistory = [...currentProgress.questionHistory, quizRecord];
-    const newTotalPoints = currentProgress.totalPoints + pointsEarned;
 
     // 평균 점수 재계산 (퀴즈 세션별 점수로 계산)
     const allScores = newQuestionHistory.map((h) => h.score);
@@ -305,16 +283,16 @@ export class ProgressManager {
 
     const newProgress: UserProgress = {
       averageScore: newAverageScore,
-      totalPoints: newTotalPoints,
       completedSubjects: newCompletedSubjects,
       questionHistory: newQuestionHistory,
     };
 
     this.saveUserProgress(newProgress);
+    // 세션 단위 이력도 별도로 저장 (문항별 정답/오답 복습용)
+    this.saveQuizSession(session);
 
     return {
       newProgress,
-      pointsEarned,
       score,
       isDuplicate: false,
     };
@@ -450,11 +428,38 @@ export class ProgressManager {
     return result;
   }
 
+  // 퀴즈 세션 이력 저장/조회 (문항별 정답/오답 복습용)
+  static getQuizSessions(): QuizSession[] {
+    const raw = localStorage.getItem(STORAGE_KEYS.QUIZ_SESSIONS);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveQuizSession(session: QuizSession): void {
+    const sessions = this.getQuizSessions();
+    const index = sessions.findIndex((s) => s.id === session.id);
+    if (index >= 0) {
+      sessions[index] = session;
+    } else {
+      sessions.push(session);
+    }
+    localStorage.setItem(STORAGE_KEYS.QUIZ_SESSIONS, JSON.stringify(sessions));
+  }
+
+  static getQuizSessionById(id: string): QuizSession | undefined {
+    const sessions = this.getQuizSessions();
+    return sessions.find((s) => s.id === id);
+  }
+
   // 전체 문제 풀이 데이터 초기화
   static resetAllProgress(): UserProgress {
     const initialProgress: UserProgress = {
       averageScore: 0,
-      totalPoints: 0,
       completedSubjects: [],
       questionHistory: [],
     };

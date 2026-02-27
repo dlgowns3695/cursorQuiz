@@ -9,6 +9,7 @@ export interface Question {
   options: string[];
   correctAnswer: number; // 정답 인덱스 (0부터 시작)
   explanation: string; // 해설
+  keywords?: string[]; // 중요 키워드 (약점 분석용)
   points?: number; // 필요시만 사용 (현재 로직에서는 미사용)
   createdAt?: string; // 필요시만 사용 (사용자 생성 문제)
   updatedAt?: string; // 필요시만 사용 (사용자 생성 문제)
@@ -17,7 +18,6 @@ export interface Question {
 // 사용자 진도 타입 정의
 export interface UserProgress {
   averageScore: number;
-  totalPoints: number;
   completedSubjects: string[];
   questionHistory: QuestionHistory[]; // 문제 풀이 이력
 }
