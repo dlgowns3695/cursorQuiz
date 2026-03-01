@@ -4,7 +4,6 @@ import { Question } from "../../types";
 export const 철도공사법: Question[] = [
   {
     subject: "철도공사법",
-
     question: "철도공사법 제1조의 목적은 무엇인가?",
     options: [
       "한국철도공사를 설립하여 철도 운영의 전문성과 효율성을 높이기 위함",
@@ -19,7 +18,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question: "철도공사법 제2조에 따르면 한국철도공사의 법적 성격은?",
     options: ["사단법인", "재단법인", "주식회사", "법인", "합자회사"],
     correctAnswer: 3,
@@ -27,7 +25,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question: "공사의 주된 사무소 소재지는 누가 정하는가?",
     options: ["국토교통부 장관", "정관", "이사회", "대통령령", "국무총리"],
     correctAnswer: 1,
@@ -36,7 +33,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question: "공사가 하부조직을 설치하려면 어떤 절차가 필요한가?",
     options: [
       "국회의 동의",
@@ -51,7 +47,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question: "공사의 자본금은 얼마로 정해져 있는가?",
     options: ["10조원", "15조원", "20조원", "22조원", "25조원"],
     correctAnswer: 3,
@@ -60,7 +55,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question: "공사의 자본금 납입 시기와 방법은 누가 정하는가?",
     options: ["국토교통부 장관", "기획재정부 장관", "대통령", "이사회", "국회"],
     correctAnswer: 1,
@@ -69,7 +63,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question: "공사는 어디에서 설립등기를 함으로써 성립하는가?",
     options: [
       "서울특별시",
@@ -84,7 +77,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question: "공사의 직원이 사장을 대신해 업무를 할 수 있는 근거는 무엇인가?",
     options: [
       "대통령령",
@@ -99,7 +91,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question:
       "공사의 임직원이 직무상 알게 된 비밀을 누설하거나 도용하면 어떤 제재를 받을 수 있는가?",
     options: [
@@ -115,7 +106,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question: "한국철도공사 또는 유사 명칭을 사용할 수 없는 사람은?",
     options: [
       "한국철도공사",
@@ -130,7 +120,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question:
       "공사의 자본금은 _______원으로 하고, 그 전부를 _______가 출자한다. 빈칸에 들어갈 말을 고르시오.",
     options: [
@@ -146,7 +135,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question:
       "공사의 설립등기는 주된 사무소의 소재지에서 하며, 등기가 필요한 사항에 관하여는 등기하기 전에는 _______에게 대항하지 못한다. 빈칸에 들어갈 말은?",
     options: ["국가", "제3자", "이사회", "정부", "공사"],
@@ -156,7 +144,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question:
       "공사의 임직원 또는 임직원이었던 사람은 직무상 알게 된 _______을 누설하거나 도용하여서는 아니 된다. 빈칸에 들어갈 말은?",
     options: ["재산", "비밀", "자료", "자산", "정보"],
@@ -176,7 +163,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question:
       "공사가 발행하는 사채의 원리금 상환을 보증할 수 있는 주체는 누구인가?",
     options: ["국토교통부장관", "공사", "정부", "이사회", "국가"],
@@ -196,7 +182,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question:
       "공사는 제9조 사업을 수행하기 위해 대부받은 국유재산을 _______할 수 있으며, 이를 위해 국토교통부장관의 승인을 받아야 한다. 빈칸에 들어갈 말은?",
     options: ["전대", "임대", "양도", "대부", "사용"],
@@ -206,7 +191,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question:
       "공사가 _______ 또는 _______로부터 위탁받은 사업과 관련하여 취득한 부동산에 대한 권리를 「부동산등기법」에 따라 등기해야 하는 경우, 공사는 이를 _______하여 등기를 촉탁할 수 있다. 빈칸에 들어갈 말은?",
     options: [
@@ -222,7 +206,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question: "제8조를 위반한 자가 받을 수 있는 형벌로 알맞은 것은?",
     options: [
       "1년 이하 징역 또는 1천만원 이하 벌금",
@@ -237,7 +220,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question: "제8조의2를 위반한 자에게 부과될 수 있는 과태료로 옳은 것은?",
     options: [
       "100만원 이하",
@@ -252,7 +234,6 @@ export const 철도공사법: Question[] = [
   },
   {
     subject: "철도공사법",
-
     question:
       "공사의 임직원이거나 임직원이었던 사람이 직무상 알게 된 비밀을 누설하거나 도용하면 부과될 벌칙은?",
     options: [
@@ -270,7 +251,6 @@ export const 철도공사법: Question[] = [
   // 22번
   {
     subject: "철도공사법",
-
     question: "제8조의2를 위반한 자에게 부과되는 과태료의 최대 금액은?",
     options: ["300만원", "400만원", "500만원", "600만원", "1천만원"],
     correctAnswer: 2,
@@ -280,7 +260,6 @@ export const 철도공사법: Question[] = [
   // 23번
   {
     subject: "철도공사법",
-
     question: "공사의 설립등기 관련하여 옳지 않은 사항 2개를 고르시오.",
     options: [
       "공사는 주된 사무소 소재지에서 설립등기를 함으로써 성립한다.",
@@ -297,7 +276,6 @@ export const 철도공사법: Question[] = [
   // 24번
   {
     subject: "철도공사법",
-
     question: "공사가 할 수 있는 사업 중 옳은 것을 고르시오.",
     options: [
       "철도 이용자 편의를 위한 역세권 개발사업",
@@ -314,7 +292,6 @@ export const 철도공사법: Question[] = [
   // 25번
   {
     subject: "철도공사법",
-
     question: "공사의 손익금 처리 중 옳지 않은 것을 고르시오.",
     options: [
       "결손금 보전",
@@ -331,7 +308,6 @@ export const 철도공사법: Question[] = [
   // 26번
   {
     subject: "철도공사법",
-
     question: "국토교통부장관이 공사의 업무에 대해 지도·감독할 수 없는 사항은?",
     options: [
       "연도별 사업계획 및 예산",
@@ -348,7 +324,6 @@ export const 철도공사법: Question[] = [
   // 27번
   {
     subject: "철도공사법",
-
     question: "공사가 사채를 발행할 때 옳지 않은 사항은?",
     options: [
       "사채 발행액은 자본금과 적립금 합계의 5배를 초과하지 못한다.",
@@ -365,7 +340,6 @@ export const 철도공사법: Question[] = [
   // 28번
   {
     subject: "철도공사법",
-
     question: "공사의 자본금 출자 권한은 누구에게 있는가?",
     options: [
       "국토교통부장관",
@@ -381,7 +355,6 @@ export const 철도공사법: Question[] = [
   // 29번
   {
     subject: "철도공사법",
-
     question:
       "공사의 설립등기와 하부조직 설치·이전·변경 등 등기 등 필요한 사항은 누가 정하는가?",
     options: [
@@ -398,7 +371,6 @@ export const 철도공사법: Question[] = [
   // 30번
   {
     subject: "철도공사법",
-
     question:
       "공사가 대부받은 국유재산을 전대하려면 누구에게 승인을 받아야 하는가?",
     options: [

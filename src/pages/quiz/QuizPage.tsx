@@ -347,7 +347,7 @@ const QuizPage: React.FC = () => {
           {/* 틀린 문제 다시 보기 */}
           <div className="mt-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-gray-800">
+              <h2 className="text-sm font-semibold text-gray-800">
                 틀린 문제 다시 보기
               </h2>
               <button
@@ -496,7 +496,7 @@ const QuizPage: React.FC = () => {
           </button>
           <div className="flex items-center space-x-4">
             {phase === "quiz" && (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 gap-6">
                 <div className="w-12 h-12 rounded-full border-4 border-blue-300 flex items-center justify-center text-sm font-semibold">
                   {Math.floor(timeLeft / 60)}:
                   {String(timeLeft % 60).padStart(2, "0")}
@@ -508,12 +508,11 @@ const QuizPage: React.FC = () => {
               </div>
             )}
             <div className="text-right">
-              <div className="text-sm text-blue-100">{decodedSubject}</div>
-              <div className="text-xs text-blue-200">
-                {isRedoMode
-                  ? "틀린 문제 재풀이 (시간 제한 없음)"
-                  : "기본문 + 시행령 통합 문제"}
-              </div>
+              {isRedoMode && (
+                <div className="text-xs text-blue-200">
+                  틀린 문제 재풀이 (시간 제한 없음)
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -529,7 +528,7 @@ const QuizPage: React.FC = () => {
         </div>
 
         {/* 문제 카드 */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md p-4 mb-4">
           <div className="mb-4">
             <div className="inline-block px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold mb-2">
               {currentQuestion.subject}

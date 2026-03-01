@@ -356,12 +356,12 @@ const MainPage: React.FC = () => {
                 </p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* 응시 기록 리스트 */}
-                  <div className="md:col-span-1 border-r border-gray-200 pr-0 md:pr-4">
+                  {/* 응시 기록 리스트 - 모바일: 상단 / 데스크톱: 왼쪽 */}
+                  <div className="md:col-span-1 md:border-r md:border-gray-200 pr-0 md:pr-4">
                     <h3 className="text-sm font-semibold text-gray-700 mb-3">
                       최근 응시 목록
                     </h3>
-                    <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    <div className="space-y-2 max-h-[35vh] md:max-h-[60vh] overflow-y-auto">
                       {userProgress.questionHistory
                         .slice()
                         .sort(
@@ -413,8 +413,8 @@ const MainPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 선택된 기록 상세 */}
-                  <div className="md:col-span-2">
+                  {/* 선택된 기록 상세 - 모바일: 목록 아래 스크롤로 바로 표시 */}
+                  <div className="md:col-span-2 min-h-0">
                     {selectedHistory && selectedSession ? (
                       <div className="space-y-4">
                         {/* 요약 정보 */}
@@ -528,7 +528,7 @@ const MainPage: React.FC = () => {
                       </div>
                     ) : (
                       <p className="text-sm text-gray-600">
-                        왼쪽 목록에서 응시 기록을 선택하면 상세 내용을 확인할 수
+                        목록에서 응시 기록을 선택하면 상세 내용을 확인할 수
                         있습니다.
                       </p>
                     )}
