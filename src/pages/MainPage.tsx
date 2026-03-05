@@ -3,6 +3,27 @@ import { useNavigate } from "react-router-dom";
 import { ProgressManager } from "../data/questionManager";
 import { UserProgress, QuestionHistory, QuizSession } from "../data/types";
 
+// 해설 문자열에서 **강조** 구문을 찾아 굵게 렌더링
+const renderExplanation = (text: string) => {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+
+  return parts.map((part, idx) => {
+    const isBold = part.startsWith("**") && part.endsWith("**");
+    if (isBold) {
+      const inner = part.slice(2, -2);
+      if (!inner.trim()) {
+        return <span key={idx}>{part}</span>;
+      }
+      return (
+        <span key={idx} className="font-bold">
+          {inner}
+        </span>
+      );
+    }
+    return <span key={idx}>{part}</span>;
+  });
+};
+
 // 과목 정보 인터페이스
 interface Subject {
   id: string;
@@ -487,7 +508,7 @@ const MainPage: React.FC = () => {
                                   </div>
                                 </div>
                                 <div className="text-sm font-medium text-gray-800 mb-3 whitespace-pre-line">
-                                  {question.question}
+                                  {renderExplanation(question.question)}
                                 </div>
                                 <div className="space-y-1">
                                   {question.options.map((opt, optIdx) => {
@@ -518,7 +539,7 @@ const MainPage: React.FC = () => {
                                     <span className="font-semibold text-gray-800">
                                       해설:
                                     </span>{" "}
-                                    {question.explanation}
+                                    {renderExplanation(question.explanation)}
                                   </div>
                                 )}
                               </div>

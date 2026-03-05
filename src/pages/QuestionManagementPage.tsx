@@ -2,6 +2,27 @@ import React, { useState, useEffect } from "react";
 import { Question } from "../data/types";
 import { QuestionManager } from "../data/questionManager";
 
+// 해설 문자열에서 **강조** 구문을 찾아 굵게 렌더링
+const renderExplanation = (text: string) => {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+
+  return parts.map((part, idx) => {
+    const isBold = part.startsWith("**") && part.endsWith("**");
+    if (isBold) {
+      const inner = part.slice(2, -2);
+      if (!inner.trim()) {
+        return <span key={idx}>{part}</span>;
+      }
+      return (
+        <span key={idx} className="font-bold">
+          {inner}
+        </span>
+      );
+    }
+    return <span key={idx}>{part}</span>;
+  });
+};
+
 interface QuestionManagementPageProps {
   subject: string;
   onBack: () => void;
@@ -246,7 +267,7 @@ const QuestionManagementPage: React.FC<QuestionManagementPageProps> = ({
                       </span>
                     </div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                      {question.question}
+                      {renderExplanation(question.question)}
                     </h3>
                     <div className="space-y-2">
                       {question.options.map((option, index) => (
@@ -270,7 +291,8 @@ const QuestionManagementPage: React.FC<QuestionManagementPageProps> = ({
                     {question.explanation && (
                       <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
                         <p className="text-sm text-blue-800">
-                          <strong>해설:</strong> {question.explanation}
+                          <strong>해설:</strong>{" "}
+                          {renderExplanation(question.explanation)}
                         </p>
                       </div>
                     )}
