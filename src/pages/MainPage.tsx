@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ProgressManager } from "../data/questionManager";
+import { SolveHistoryManager } from "../data/solveHistoryManager";
+import {
+  enrichWrongStatsWithQuestions,
+  filterWeakQuestionStats,
+} from "../data/solveHistoryStats";
+import { questionService } from "../data/questionService";
 import { UserProgress, QuestionHistory, QuizSession } from "../data/types";
 
 // 해설 문자열에서 **강조** 구문을 찾아 굵게 렌더링
@@ -45,12 +51,6 @@ const MainPage: React.FC = () => {
     questionHistory: [],
   });
 
-  // 통계 모달 상태
-  const [showStatsModal, setShowStatsModal] = useState(false);
-  const [selectedStatsSubject, setSelectedStatsSubject] = useState<
-    string | null
-  >(null);
-
   // 초기화 확인 모달 상태
   const [showResetModal, setShowResetModal] = useState(false);
   const [selectedSubjectToReset, setSelectedSubjectToReset] = useState<
@@ -64,6 +64,10 @@ const MainPage: React.FC = () => {
   const [selectedSession, setSelectedSession] = useState<QuizSession | null>(
     null,
   );
+
+  // 문항별 오답 빈도 모달
+  const [showWrongRateModal, setShowWrongRateModal] = useState(false);
+  const [weakOnlyWrongRate, setWeakOnlyWrongRate] = useState(false);
 
   // 과목 정보 정의
   const subjects: Subject[] = [
@@ -113,6 +117,7 @@ const MainPage: React.FC = () => {
       // 철도법령 관련 모든 학습 데이터 초기화
       const newProgress = ProgressManager.resetAllProgress();
       setUserProgress(newProgress);
+      SolveHistoryManager.clear();
     }
 
     setShowResetModal(false);
@@ -153,6 +158,17 @@ const MainPage: React.FC = () => {
     setSelectedSession(null);
   };
 
+  const wrongRateRows = useMemo(() => {
+    if (!showWrongRateModal) return [];
+    const raw = SolveHistoryManager.getWrongStatsSorted();
+    const filtered = weakOnlyWrongRate
+      ? filterWeakQuestionStats(raw, 0.4)
+      : raw;
+    return enrichWrongStatsWithQuestions(filtered, (id) =>
+      questionService.getQuestionByQuestionId(id),
+    );
+  }, [showWrongRateModal, weakOnlyWrongRate]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 메인 컨텐츠 */}
@@ -167,14 +183,8 @@ const MainPage: React.FC = () => {
           </p>
         </div>
 
-        {/* 통계 / 응시 기록 버튼 */}
-        <div className="mb-12 flex items-center justify-center gap-4">
-          <button
-            onClick={() => setShowStatsModal(true)}
-            className="px-4 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors shadow-lg text-sm"
-          >
-            상세 통계 보기
-          </button>
+        {/* 응시 기록 / 오답 빈도 */}
+        <div className="mb-12 flex items-center justify-center gap-4 flex-wrap">
           <button
             onClick={handleHistoryOpen}
             disabled={userProgress.questionHistory.length === 0}
@@ -185,6 +195,12 @@ const MainPage: React.FC = () => {
             }`}
           >
             응시 기록 보기
+          </button>
+          <button
+            onClick={() => setShowWrongRateModal(true)}
+            className="px-4 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition-colors shadow-lg text-sm"
+          >
+            문항 오답 빈도
           </button>
         </div>
 
@@ -236,125 +252,6 @@ const MainPage: React.FC = () => {
           ))}
         </div>
       </main>
-
-      {/* 통계 모달 */}
-      {showStatsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              {/* 모달 헤더 */}
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">상세 통계</h2>
-                <button
-                  onClick={() => {
-                    setShowStatsModal(false);
-                    setSelectedStatsSubject(null);
-                  }}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
-                >
-                  ×
-                </button>
-              </div>
-
-              {/* 과목 선택 */}
-              {!selectedStatsSubject ? (
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-6">
-                    통계를 볼 과목을 선택하세요
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                    {/* 철도법령 */}
-                    <button
-                      onClick={() => setSelectedStatsSubject("railway")}
-                      className="p-6 bg-white border-2 border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 transition-colors"
-                    >
-                      <div className="text-4xl mb-3">🚂</div>
-                      <div className="font-semibold text-gray-800 text-lg mb-2">
-                        철도법령
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        철도법령 관련 통계 보기
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  {/* 뒤로가기 버튼 */}
-                  <div className="mb-6">
-                    <button
-                      onClick={() => setSelectedStatsSubject(null)}
-                      className="text-blue-500 hover:text-blue-700 mb-4 flex items-center"
-                    >
-                      ← 과목 선택으로 돌아가기
-                    </button>
-                    <h3 className="text-lg font-semibold text-gray-700">
-                      철도법령 상세 통계
-                    </h3>
-                  </div>
-
-                  {/* 통계 내용: 과목별 풀이 횟수·평균만 표시 (난이도 구분 없음) */}
-                  <div className="space-y-6">
-                    {selectedStatsSubject === "railway"
-                      ? [
-                          {
-                            name: "철도산업발전기본법(기본법+시행령)",
-                            icon: "🏛️",
-                            color: "bg-red-100 border-red-200",
-                            subjectName: "철도산업발전기본법(기본법+시행령)",
-                          },
-                          {
-                            name: "철도산업법(기본법+시행령)",
-                            icon: "🚂",
-                            color: "bg-blue-100 border-blue-200",
-                            subjectName: "철도산업법(기본법+시행령)",
-                          },
-                          {
-                            name: "철도공사법(기본법+시행령)",
-                            icon: "🏢",
-                            color: "bg-green-100 border-green-200",
-                            subjectName: "철도공사법(기본법+시행령)",
-                          },
-                          {
-                            name: "전체 통합",
-                            icon: "📚",
-                            color: "bg-purple-100 border-purple-200",
-                            subjectName: "전체 통합",
-                          },
-                        ].map((law) => {
-                          const progress = ProgressManager.getSubjectProgress(
-                            law.subjectName,
-                          );
-                          return (
-                            <div
-                              key={law.name}
-                              className={`rounded-lg border-2 ${law.color} p-6`}
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center">
-                                  <div className="text-3xl mr-3">
-                                    {law.icon}
-                                  </div>
-                                  <h4 className="text-xl font-bold text-gray-800">
-                                    {law.name}
-                                  </h4>
-                                </div>
-                                <div className="text-right text-sm text-gray-600">
-                                  <div>풀이: {progress.totalQuestions}회</div>
-                                  <div>평균: {progress.averageScore}점</div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })
-                      : null}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 응시 기록 모달 */}
       {showHistoryModal && (
@@ -561,6 +458,146 @@ const MainPage: React.FC = () => {
         </div>
       )}
 
+      {/* 문항별 오답 빈도 (solveHistory 기반, 신규 문항은 풀이 누적 시 자동 반영) */}
+      {showWrongRateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center gap-4 flex-wrap">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">
+                  문항 오답 빈도
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  풀이할 때마다 기록이 쌓이며, 은행에 추가된 문항은 풀이 후 여기에
+                  나타납니다.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={weakOnlyWrongRate}
+                    onChange={(e) => setWeakOnlyWrongRate(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  취약만 (오답률 40% 이상)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWrongRateModal(false);
+                    setWeakOnlyWrongRate(false);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                  aria-label="닫기"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="overflow-auto flex-1 p-3 sm:p-4 min-h-0">
+              {wrongRateRows.length === 0 ? (
+                <p className="text-sm text-gray-600 text-center py-8">
+                  표시할 풀이 기록이 없거나, 필터 조건에 맞는 문항이 없습니다.
+                </p>
+              ) : (
+                <>
+                  {/* 좁은 화면: 카드 리스트(세로 스크롤, 문항은 전체 너비 줄바꿈) */}
+                  <div className="space-y-3 md:hidden">
+                    {wrongRateRows.map((row) => (
+                      <div
+                        key={row.questionId}
+                        className="rounded-xl border border-amber-200/80 bg-amber-50/40 p-3 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <span className="font-mono text-xs text-gray-600 tabular-nums">
+                            ID {row.questionId}
+                          </span>
+                          <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-sm font-bold text-amber-900 tabular-nums">
+                            {(row.wrongRate * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-gray-700 mb-1.5 break-words">
+                          {row.subject ?? "—"}
+                        </p>
+                        <p className="text-sm text-gray-900 leading-snug break-words [overflow-wrap:anywhere]">
+                          {row.questionPreview || "(문항을 찾을 수 없음)"}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-amber-200/60 pt-2 text-xs text-gray-600">
+                          <span>
+                            풀이{" "}
+                            <strong className="text-gray-800">{row.total}</strong>
+                          </span>
+                          <span>
+                            오답{" "}
+                            <strong className="text-gray-800">{row.wrong}</strong>
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 넓은 화면: 표 + 가로 스크롤(중간 폭 태블릿 세로 모드 대비) */}
+                  <div className="hidden md:block overflow-x-auto -mx-1">
+                    <table className="min-w-[640px] w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200 bg-gray-50 text-left">
+                          <th className="py-2 px-2 font-semibold text-gray-700">
+                            ID
+                          </th>
+                          <th className="py-2 px-2 font-semibold text-gray-700">
+                            과목
+                          </th>
+                          <th className="py-2 px-2 font-semibold text-gray-700">
+                            문항
+                          </th>
+                          <th className="py-2 px-2 font-semibold text-gray-700">
+                            풀이
+                          </th>
+                          <th className="py-2 px-2 font-semibold text-gray-700">
+                            오답
+                          </th>
+                          <th className="py-2 px-2 font-semibold text-gray-700">
+                            오답률
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {wrongRateRows.map((row) => (
+                          <tr
+                            key={row.questionId}
+                            className="border-b border-gray-100 hover:bg-amber-50/50"
+                          >
+                            <td className="py-2 px-2 font-mono text-xs text-gray-800 whitespace-nowrap">
+                              {row.questionId}
+                            </td>
+                            <td className="py-2 px-2 text-gray-700 whitespace-nowrap">
+                              {row.subject ?? "—"}
+                            </td>
+                            <td className="py-2 px-2 text-gray-800 max-w-md break-words [overflow-wrap:anywhere]">
+                              {row.questionPreview || "(문항을 찾을 수 없음)"}
+                            </td>
+                            <td className="py-2 px-2 text-gray-700 whitespace-nowrap">
+                              {row.total}
+                            </td>
+                            <td className="py-2 px-2 text-gray-700 whitespace-nowrap">
+                              {row.wrong}
+                            </td>
+                            <td className="py-2 px-2 font-semibold text-amber-800 whitespace-nowrap tabular-nums">
+                              {(row.wrongRate * 100).toFixed(1)}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 초기화 확인 모달 */}
       {showResetModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -573,15 +610,16 @@ const MainPage: React.FC = () => {
                   데이터 초기화
                 </h2>
                 <p className="text-gray-600">
-                  철도법령 관련 모든 학습 데이터가 삭제됩니다.
+                  철도법령 관련 학습·응시 기록 및 문항 오답 빈도 데이터가
+                  삭제됩니다.
                 </p>
               </div>
 
               {/* 확인 메시지 */}
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                 <p className="text-red-800 text-sm">
-                  <strong>주의:</strong> 이 작업은 되돌릴 수 없습니다. 철도법령{" "}
-                  관련 모든 학습 데이터가 삭제됩니다.
+                  <strong>주의:</strong> 이 작업은 되돌릴 수 없습니다. 철도법령
+                  관련 학습 진도, 응시 기록, 문항별 풀이 기록이 삭제됩니다.
                 </p>
               </div>
 

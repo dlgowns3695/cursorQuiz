@@ -3,6 +3,8 @@ export interface Question {
   // 정식 문제 관리(사용자 생성)에만 필요한 필드들은 선택(optional)로 두고,
   // 하드코딩된 문제 배열에서는 생략할 수 있게 합니다.
   id?: string;
+  /** 내장 문항 고유 번호 — 각 법령 데이터 파일에서 withQuestionIds로 부여 */
+  questionId?: number;
   subject: string; // 과목명 (예: "철도산업법")
   difficulty?: "매우쉬움" | "쉬움" | "보통" | "어려움" | "매우어려움";
   question: string;

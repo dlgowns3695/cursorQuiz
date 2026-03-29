@@ -30,4 +30,12 @@ export const STORAGE_KEYS = {
   USER_PROGRESS: "userProgress",
   QUESTIONS: "questions",
   QUIZ_SESSIONS: "quizSessions",
+  SOLVE_HISTORY: "solveHistory",
+} as const;
+
+/** 내장 문항 questionId 상위 구간 (백만 단위로 법령 구분) */
+export const QUESTION_ID_PREFIX = {
+  철도산업발전기본법: 1_000_000,
+  철도산업법: 2_000_000,
+  철도공사법: 3_000_000,
 } as const;

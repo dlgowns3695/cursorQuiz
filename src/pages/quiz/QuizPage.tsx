@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Question, QuizSession } from "../../data/types";
 import { questionService } from "../../data/questionService";
 import { ProgressManager } from "../../data/questionManager";
+import { SolveHistoryManager } from "../../data/solveHistoryManager";
+import { buildSolveEntriesFromQuiz } from "../../data/solveHistoryStats";
 import { QUIZ_QUESTIONS_COUNT } from "../../data/constants";
 
 // 해설 문자열에서 **강조** 구문을 찾아 굵게 렌더링
@@ -84,6 +86,15 @@ const QuizPage: React.FC = () => {
       questions,
     );
 
+    const solveEntries = buildSolveEntriesFromQuiz(
+      questions,
+      finalAnswers,
+      finishedAt,
+    );
+    if (solveEntries.length) {
+      SolveHistoryManager.appendEntries(solveEntries);
+    }
+
     setScore(result.score);
     setCompletedAt(finishedAt);
     setPhase("result");
@@ -104,7 +115,7 @@ const QuizPage: React.FC = () => {
       return;
     }
 
-    // 과목(기본법 이름)을 기준으로, 해당 기본법 + 시행령 문제를 묶어서 가져온다.
+    // 과목(법령명)에 해당하는 문제 풀에서 무작위 출제
     const qs = questionService.getRandomQuestionsBySubject(
       decodedSubject,
       QUIZ_QUESTIONS_COUNT,
@@ -237,6 +248,15 @@ const QuizPage: React.FC = () => {
     }
 
     if (currentIndex === redoQuestions.length - 1) {
+      const finishedAt = new Date().toISOString();
+      const redoSolveEntries = buildSolveEntriesFromQuiz(
+        redoQuestions,
+        redoAnswers,
+        finishedAt,
+      );
+      if (redoSolveEntries.length) {
+        SolveHistoryManager.appendEntries(redoSolveEntries);
+      }
       // 재풀이 결과: 틀렸던 문제 중 몇 개를 맞았는지만 계산
       let correct = 0;
       redoQuestions.forEach((q, idx) => {
@@ -341,7 +361,7 @@ const QuizPage: React.FC = () => {
                 </p>
               )}
               <p className="text-xs text-gray-500 mt-1">
-                (기본문 + 시행령 문제가 함께 출제되었습니다.)
+                (해당 법령에 속하는 문항이 출제되었습니다.)
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 justify-end">
