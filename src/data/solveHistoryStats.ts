@@ -46,6 +46,24 @@ export function computeQuestionWrongStats(
 }
 
 /**
+ * 정답률이 이 비율 이상이면 오답 빈도 목록에서 제외합니다.
+ * (오답률이 (1 - 이 값) 이하인 문항은 숨김)
+ */
+export const MIN_CORRECT_RATE_TO_HIDE_IN_WRONG_FREQUENCY = 0.9;
+
+/**
+ * 정답률이 일정 수준 이상(기본 90%)인 문항은 오답 빈도 UI에 너무 많이 쌓이지 않도록 제외합니다.
+ * 남기는 조건: 오답률 > (1 - minCorrectRateToHide), 즉 정답률 < minCorrectRateToHide.
+ */
+export function filterExcludeHighCorrectRateForDisplay(
+  stats: QuestionWrongStats[],
+  minCorrectRateToHide = MIN_CORRECT_RATE_TO_HIDE_IN_WRONG_FREQUENCY,
+): QuestionWrongStats[] {
+  const maxWrongRateInclusive = 1 - minCorrectRateToHide;
+  return stats.filter((s) => s.wrongRate > maxWrongRateInclusive);
+}
+
+/**
  * wrongRate가 minWrongRate 이상인 문항만 반환합니다 (기본 0.4 = 40%).
  */
 export function filterWeakQuestionStats(

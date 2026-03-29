@@ -3,6 +3,7 @@ import type { QuestionWrongStats } from "./solveHistoryStats";
 import {
   SolveHistoryEntry,
   computeQuestionWrongStats,
+  filterExcludeHighCorrectRateForDisplay,
   filterWeakQuestionStats,
 } from "./solveHistoryStats";
 
@@ -50,6 +51,9 @@ export class SolveHistoryManager {
   }
 
   static getWeakQuestionStats(minWrongRate = 0.4): QuestionWrongStats[] {
-    return filterWeakQuestionStats(this.getWrongStatsSorted(), minWrongRate);
+    const forDisplay = filterExcludeHighCorrectRateForDisplay(
+      this.getWrongStatsSorted(),
+    );
+    return filterWeakQuestionStats(forDisplay, minWrongRate);
   }
 }

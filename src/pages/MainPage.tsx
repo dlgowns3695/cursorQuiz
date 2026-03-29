@@ -4,6 +4,7 @@ import { ProgressManager } from "../data/questionManager";
 import { SolveHistoryManager } from "../data/solveHistoryManager";
 import {
   enrichWrongStatsWithQuestions,
+  filterExcludeHighCorrectRateForDisplay,
   filterWeakQuestionStats,
 } from "../data/solveHistoryStats";
 import { questionService } from "../data/questionService";
@@ -161,9 +162,10 @@ const MainPage: React.FC = () => {
   const wrongRateRows = useMemo(() => {
     if (!showWrongRateModal) return [];
     const raw = SolveHistoryManager.getWrongStatsSorted();
+    const forDisplay = filterExcludeHighCorrectRateForDisplay(raw);
     const filtered = weakOnlyWrongRate
-      ? filterWeakQuestionStats(raw, 0.4)
-      : raw;
+      ? filterWeakQuestionStats(forDisplay, 0.4)
+      : forDisplay;
     return enrichWrongStatsWithQuestions(filtered, (id) =>
       questionService.getQuestionByQuestionId(id),
     );
@@ -469,7 +471,7 @@ const MainPage: React.FC = () => {
                 </h2>
                 <p className="text-xs text-gray-500 mt-1">
                   풀이할 때마다 기록이 쌓이며, 은행에 추가된 문항은 풀이 후 여기에
-                  나타납니다.
+                  나타납니다. 정답률 90% 이상인 문항은 목록에서 빼 두었습니다.
                 </p>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
